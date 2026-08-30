@@ -9,6 +9,7 @@
     "start": "node server.js",
     "dev": "node server.js",
     "migrate": "node db/migrate.js",
+    "seed": "node db/seed.js",
     "test": "jest --runInBand"
   },
   "dependencies": {
