@@ -44,6 +44,7 @@ function listCurrentWithDetails() {
          a.planned_end,
          a.created_by,
          o.order_type,
+         o.required_specialist_type,
          o.status AS order_status,
          o.deadline_at,
          o.estimated_hours,

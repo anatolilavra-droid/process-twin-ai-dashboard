@@ -2,7 +2,7 @@ import OrderTypeTag from './OrderTypeTag';
 import StatusBadge from './StatusBadge';
 import { formatBoardTime, formatClockTime } from '../lib/format';
 
-function ProcessBoard({ specialists, scheduleEntries, loading }) {
+function ProcessBoard({ specialists, scheduleEntries, loading, onSelectAssignment }) {
   const bySpecialist = new Map(specialists.map(s => [s.id, []]));
   for (const entry of scheduleEntries) {
     if (!bySpecialist.has(entry.specialistId)) bySpecialist.set(entry.specialistId, []);
@@ -45,14 +45,20 @@ function ProcessBoard({ specialists, scheduleEntries, loading }) {
                 ) : (
                   <ul className="flex flex-col gap-2">
                     {entries.map(entry => (
-                      <li key={entry.assignmentId} className="rounded border border-border bg-surface-2 p-2">
-                        <div className="mb-1 flex items-center justify-between gap-2">
-                          <OrderTypeTag orderType={entry.orderType} />
-                          <StatusBadge status={entry.orderStatus} />
-                        </div>
-                        <p className="font-mono text-xs tabular-nums text-ink-muted">
-                          {formatBoardTime(entry.plannedStart)}–{formatClockTime(entry.plannedEnd)}
-                        </p>
+                      <li key={entry.assignmentId}>
+                        <button
+                          type="button"
+                          onClick={() => onSelectAssignment(entry)}
+                          className="w-full cursor-pointer rounded border border-border bg-surface-2 p-2 text-left transition hover:border-accent focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
+                        >
+                          <div className="mb-1 flex items-center justify-between gap-2">
+                            <OrderTypeTag orderType={entry.orderType} />
+                            <StatusBadge status={entry.orderStatus} />
+                          </div>
+                          <p className="font-mono text-xs tabular-nums text-ink-muted">
+                            {formatBoardTime(entry.plannedStart)}–{formatClockTime(entry.plannedEnd)}
+                          </p>
+                        </button>
                       </li>
                     ))}
                   </ul>

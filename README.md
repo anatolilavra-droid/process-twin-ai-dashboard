@@ -2,9 +2,23 @@
 
 Research prototype: a simulated operational process (order intake → scheduling → explanation → human override) for a small service company, built to explore how AI can support — not replace — operational decisions.
 
-**Status:** Stage A complete (synthetic orders, heuristic scheduler, live dashboard board). Stage B backend complete: AI explanations, accept/override, and decision history are all wired up. Stage B frontend (surfacing explanations and override in the UI) is next.
+**Status:** Stage A complete (synthetic orders, heuristic scheduler, live dashboard board). Stage B complete: AI explanations and human accept/override, end to end from the API through the UI. Metrics/history view is Stage C, not built yet.
 
 See [`CLAUDE.md`](./CLAUDE.md) for the full project context, constraints, research questions, and development plan (Stage A–D).
+
+## Screenshots
+
+Board after generating and scheduling 10 synthetic orders — three specialist columns, empty queue:
+
+![Process board with three specialist columns of scheduled orders](docs/screenshots/board.png)
+
+Clicking an assignment opens its explanation — grounded in the scheduler's real inputs, not invented ones. No `ANTHROPIC_API_KEY` is configured in this particular run, so it's the deterministic fallback (`confidence: "low"`), which is exactly the degraded-but-honest path described below rather than a crash:
+
+![Assignment detail modal showing a fallback explanation with top factors](docs/screenshots/explanation.png)
+
+Overriding to a specialist whose type doesn't match the order's requirement — allowed, but flagged so the operator can judge it themselves:
+
+![Override form with a specialist-type-mismatch warning](docs/screenshots/override.png)
 
 ## Structure
 
@@ -62,4 +76,4 @@ Requires `ANTHROPIC_API_KEY` in `server/.env`. Without it (or if the call fails 
 - No authentication — single-tenant, permissive CORS, not a production posture.
 - Scheduler is a deterministic heuristic (earliest-deadline-first + type priority), not a learned model — see `server/services/schedulingService.js`.
 - Scheduler ignores specialists' `hours_per_day` and day/working-hours boundaries; treats them as available back-to-back from the reference time.
-- No frontend for explanations/override yet — API only, see below.
+- No metrics or decision-history view yet (% on-time, override rate, etc.) — that's Stage C.

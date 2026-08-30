@@ -52,4 +52,39 @@ function getSchedule() {
   return request('/api/schedule');
 }
 
-export { ApiError, generateOrders, listOrders, listSpecialists, runSchedule, getSchedule };
+function getExplanation(orderId) {
+  return request(`/api/orders/${orderId}/explanation`);
+}
+
+function acceptAssignment(assignmentId) {
+  return request(`/api/assignments/${assignmentId}/accept`, { method: 'POST' });
+}
+
+function overrideAssignment(assignmentId, { specialistId, plannedStart, plannedEnd, reason }) {
+  return request(`/api/assignments/${assignmentId}/override`, {
+    method: 'POST',
+    body: JSON.stringify({ specialistId, plannedStart, plannedEnd, reason }),
+  });
+}
+
+function listDecisions({ orderId, limit, offset } = {}) {
+  const params = new URLSearchParams();
+  if (orderId) params.set('orderId', orderId);
+  if (limit !== undefined) params.set('limit', limit);
+  if (offset !== undefined) params.set('offset', offset);
+  const query = params.toString();
+  return request(`/api/decisions${query ? `?${query}` : ''}`);
+}
+
+export {
+  ApiError,
+  generateOrders,
+  listOrders,
+  listSpecialists,
+  runSchedule,
+  getSchedule,
+  getExplanation,
+  acceptAssignment,
+  overrideAssignment,
+  listDecisions,
+};

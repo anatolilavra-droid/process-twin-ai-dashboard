@@ -142,4 +142,4 @@
 
 ## Прогресс (обновляется по ходу)
 
-Stage A (PT‑01…PT‑07) полностью готов и проверен живьём. Stage B backend готов: explanation‑сервис (`claude-opus-5`, structured output через `client.messages.parse()` + Zod, честный fallback), accept/override (`decisionService.js`, транзакционно) и `decision_log` (ai_proposed/human_accepted/human_overridden). Не хватает: UI для explanations/override во фронтенде. Актуальная схема БД, API и статус функциональности — в `docs/spec.md`, а не только здесь; при расхождении верить коду и `docs/spec.md`.
+Stage A (PT‑01…PT‑07) и Stage B (explanations + accept/override, API и UI) полностью готовы и проверены живьём (Playwright, реальный сервер, скриншоты в `docs/screenshots/`). Не хватает: Stage C (метрики, история решений в UI) и Stage D (демо-сценарий, «For Researchers»). Актуальная схема БД, API и статус функциональности — в `docs/spec.md`, а не только здесь; при расхождении верить коду и `docs/spec.md`.

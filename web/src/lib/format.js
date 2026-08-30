@@ -19,4 +19,12 @@ function formatRelativeToNow(iso, nowMs = Date.now()) {
   return diffMs >= 0 ? `in ${label}` : `${label} overdue`;
 }
 
-export { formatClockTime, formatBoardTime, formatRelativeToNow };
+// Value for <input type="datetime-local">, in the viewer's local time zone
+// (the browser then round-trips it back to a correct UTC ISO string on submit).
+function toDatetimeLocalValue(iso) {
+  const d = new Date(iso);
+  const pad = n => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
+export { formatClockTime, formatBoardTime, formatRelativeToNow, toDatetimeLocalValue };

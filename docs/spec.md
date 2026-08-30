@@ -46,7 +46,11 @@ On any failure (no `ANTHROPIC_API_KEY`, network, schema mismatch), falls back to
 
 ## Override / accept (`server/services/decisionService.js`, Stage B)
 
-Override does **not** enforce that the target specialist's `specialist_type` matches the order's `required_specialist_type` — that's deliberate: the scheduler enforces it because it has no other signal, but a human operator overriding may know something the scheduler doesn't (the whole point of human-in-the-loop). The frontend should still surface the specialist's type so the operator can judge the mismatch themselves, rather than hiding it.
+Override does **not** enforce that the target specialist's `specialist_type` matches the order's `required_specialist_type` — that's deliberate: the scheduler enforces it because it has no other signal, but a human operator overriding may know something the scheduler doesn't (the whole point of human-in-the-loop). The frontend surfaces the mismatch as a warning (`OverridePlanModal.jsx`) rather than hiding it or blocking the action.
+
+## Frontend (`web/src/`)
+
+`pages/Dashboard.jsx` orchestrates: generate/schedule buttons, `components/OrderQueue.jsx` (unassigned orders), `components/ProcessBoard.jsx` (one column per specialist, cards clickable). Clicking a card opens `components/OverridePlanModal.jsx`, which embeds `components/ExplanationPanel.jsx` (fetches and renders the explanation, including the fallback notice when `source: "fallback"`) plus Accept and Override controls. See `docs/screenshots/`.
 
 ## Not built yet
 

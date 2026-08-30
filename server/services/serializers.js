@@ -25,6 +25,7 @@ function serializeScheduleEntry(row) {
     assignmentId: row.assignment_id,
     orderId: row.order_id,
     orderType: row.order_type,
+    requiredSpecialistType: row.required_specialist_type,
     orderStatus: row.order_status,
     deadlineAt: row.deadline_at,
     estimatedHours: row.estimated_hours,

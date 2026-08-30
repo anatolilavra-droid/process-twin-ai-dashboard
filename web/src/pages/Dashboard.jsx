@@ -1,7 +1,16 @@
 import { useCallback, useEffect, useState } from 'react';
-import { generateOrders, getSchedule, listOrders, listSpecialists, runSchedule } from '../api/client';
+import {
+  acceptAssignment,
+  generateOrders,
+  getSchedule,
+  listOrders,
+  listSpecialists,
+  overrideAssignment,
+  runSchedule,
+} from '../api/client';
 import OrderQueue from '../components/OrderQueue';
 import ProcessBoard from '../components/ProcessBoard';
+import OverridePlanModal from '../components/OverridePlanModal';
 
 function Dashboard() {
   const [specialists, setSpecialists] = useState([]);
@@ -12,6 +21,7 @@ function Dashboard() {
   const [isScheduling, setIsScheduling] = useState(false);
   const [statusMessage, setStatusMessage] = useState(null);
   const [errorMessage, setErrorMessage] = useState(null);
+  const [selectedEntry, setSelectedEntry] = useState(null);
 
   const loadAll = useCallback(async () => {
     const [specialistsRes, ordersRes, scheduleRes] = await Promise.all([
@@ -61,6 +71,20 @@ function Dashboard() {
     }
   }
 
+  async function handleAccept(assignmentId) {
+    await acceptAssignment(assignmentId);
+    setStatusMessage('Accepted the proposed plan.');
+    setSelectedEntry(null);
+    await loadAll();
+  }
+
+  async function handleOverride(assignmentId, body) {
+    await overrideAssignment(assignmentId, body);
+    setStatusMessage('Overrode the plan — reassigned and logged.');
+    setSelectedEntry(null);
+    await loadAll();
+  }
+
   const buttonBase =
     'inline-flex min-h-11 items-center rounded-md px-4 text-sm font-medium transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white disabled:cursor-not-allowed disabled:opacity-50';
 
@@ -68,7 +92,7 @@ function Dashboard() {
     <div className="mx-auto flex min-h-screen max-w-6xl flex-col gap-4 px-4 py-6 sm:px-6">
       <header className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <p className="text-xs font-semibold uppercase tracking-widest text-accent">Stage A</p>
+          <p className="text-xs font-semibold uppercase tracking-widest text-accent">Stage B</p>
           <h1 className="text-2xl font-bold text-ink">Process Twin AI Dashboard</h1>
         </div>
         <div className="flex gap-2">
@@ -101,8 +125,23 @@ function Dashboard() {
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-[280px_1fr]">
         <OrderQueue orders={queuedOrders} loading={loading} />
-        <ProcessBoard specialists={specialists} scheduleEntries={scheduleEntries} loading={loading} />
+        <ProcessBoard
+          specialists={specialists}
+          scheduleEntries={scheduleEntries}
+          loading={loading}
+          onSelectAssignment={setSelectedEntry}
+        />
       </div>
+
+      {selectedEntry && (
+        <OverridePlanModal
+          entry={selectedEntry}
+          specialists={specialists}
+          onClose={() => setSelectedEntry(null)}
+          onAccept={handleAccept}
+          onOverride={handleOverride}
+        />
+      )}
     </div>
   );
 }
