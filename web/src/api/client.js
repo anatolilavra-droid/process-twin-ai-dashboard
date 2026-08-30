@@ -76,6 +76,10 @@ function listDecisions({ orderId, limit, offset } = {}) {
   return request(`/api/decisions${query ? `?${query}` : ''}`);
 }
 
+function getMetrics() {
+  return request('/api/metrics');
+}
+
 export {
   ApiError,
   generateOrders,
@@ -87,4 +91,5 @@ export {
   acceptAssignment,
   overrideAssignment,
   listDecisions,
+  getMetrics,
 };

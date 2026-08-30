@@ -2,7 +2,9 @@ import { useCallback, useEffect, useState } from 'react';
 import {
   acceptAssignment,
   generateOrders,
+  getMetrics,
   getSchedule,
+  listDecisions,
   listOrders,
   listSpecialists,
   overrideAssignment,
@@ -11,11 +13,15 @@ import {
 import OrderQueue from '../components/OrderQueue';
 import ProcessBoard from '../components/ProcessBoard';
 import OverridePlanModal from '../components/OverridePlanModal';
+import MetricsPanel from '../components/MetricsPanel';
+import HistoryTimeline from '../components/HistoryTimeline';
 
 function Dashboard() {
   const [specialists, setSpecialists] = useState([]);
   const [queuedOrders, setQueuedOrders] = useState([]);
   const [scheduleEntries, setScheduleEntries] = useState([]);
+  const [metrics, setMetrics] = useState(null);
+  const [decisions, setDecisions] = useState([]);
   const [loading, setLoading] = useState(true);
   const [isGenerating, setIsGenerating] = useState(false);
   const [isScheduling, setIsScheduling] = useState(false);
@@ -24,14 +30,18 @@ function Dashboard() {
   const [selectedEntry, setSelectedEntry] = useState(null);
 
   const loadAll = useCallback(async () => {
-    const [specialistsRes, ordersRes, scheduleRes] = await Promise.all([
+    const [specialistsRes, ordersRes, scheduleRes, metricsRes, decisionsRes] = await Promise.all([
       listSpecialists(),
       listOrders({ status: 'queued', limit: 100 }),
       getSchedule(),
+      getMetrics(),
+      listDecisions({ limit: 100 }),
     ]);
     setSpecialists(specialistsRes);
     setQueuedOrders(ordersRes);
     setScheduleEntries(scheduleRes);
+    setMetrics(metricsRes);
+    setDecisions(decisionsRes);
   }, []);
 
   useEffect(() => {
@@ -92,7 +102,7 @@ function Dashboard() {
     <div className="mx-auto flex min-h-screen max-w-6xl flex-col gap-4 px-4 py-6 sm:px-6">
       <header className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <p className="text-xs font-semibold uppercase tracking-widest text-accent">Stage B</p>
+          <p className="text-xs font-semibold uppercase tracking-widest text-accent">Stage C</p>
           <h1 className="text-2xl font-bold text-ink">Process Twin AI Dashboard</h1>
         </div>
         <div className="flex gap-2">
@@ -123,6 +133,8 @@ function Dashboard() {
         )}
       </p>
 
+      <MetricsPanel metrics={metrics} loading={loading} />
+
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-[280px_1fr]">
         <OrderQueue orders={queuedOrders} loading={loading} />
         <ProcessBoard
@@ -132,6 +144,8 @@ function Dashboard() {
           onSelectAssignment={setSelectedEntry}
         />
       </div>
+
+      <HistoryTimeline decisions={decisions} loading={loading} />
 
       {selectedEntry && (
         <OverridePlanModal

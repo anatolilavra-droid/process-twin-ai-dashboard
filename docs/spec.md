@@ -63,7 +63,8 @@ The three metrics CLAUDE.md names ("% заказов в дедлайн, сред
 
 All three are `null` (never `0`) when their denominator is empty, so an empty dashboard reads as "no data" rather than a misleading 0%. `sampleSize` in the response carries the underlying counts.
 
+`MetricsPanel.jsx` renders the three tiles; `HistoryTimeline.jsx` lists `GET /api/decisions` newest-first with the reason text when present. Both refresh alongside the rest of `Dashboard.jsx`'s state after every action (generate/schedule/accept/override).
+
 ## Not built yet
 
-- Decision-history UI (list view over `GET /api/decisions`) — metrics are done, history view isn't yet.
 - Demo script, "For Researchers" page (Stage D).
