@@ -3,6 +3,7 @@ const db = require('../config/database');
 const orderRepository = require('../repositories/orderRepository');
 const specialistRepository = require('../repositories/specialistRepository');
 const assignmentRepository = require('../repositories/assignmentRepository');
+const decisionLogRepository = require('../repositories/decisionLogRepository');
 const { planSchedule } = require('../services/schedulingService');
 const { serializeScheduleEntry } = require('../services/serializers');
 
@@ -19,7 +20,7 @@ function runSchedule(req, res, next) {
     const createdAt = new Date().toISOString();
     const persist = db.transaction(() => {
       for (const assignment of assignments) {
-        assignmentRepository.create({
+        const created = assignmentRepository.create({
           id: randomUUID(),
           orderId: assignment.orderId,
           specialistId: assignment.specialistId,
@@ -29,6 +30,15 @@ function runSchedule(req, res, next) {
           createdAt,
         });
         orderRepository.updateStatus(assignment.orderId, 'scheduled');
+        decisionLogRepository.create({
+          id: randomUUID(),
+          orderId: assignment.orderId,
+          action: 'ai_proposed',
+          previousAssignmentId: null,
+          newAssignmentId: created.id,
+          reasonText: null,
+          createdAt,
+        });
       }
     });
     persist();

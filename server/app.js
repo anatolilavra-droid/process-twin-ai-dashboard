@@ -3,6 +3,8 @@ const cors = require('cors');
 const ordersRouter = require('./routes/orders');
 const specialistsRouter = require('./routes/specialists');
 const scheduleRouter = require('./routes/schedule');
+const assignmentsRouter = require('./routes/assignments');
+const decisionsRouter = require('./routes/decisions');
 const notFoundHandler = require('./middleware/notFoundHandler');
 const errorHandler = require('./middleware/errorHandler');
 
@@ -20,6 +22,8 @@ function createApp() {
   app.use('/api/orders', ordersRouter);
   app.use('/api/specialists', specialistsRouter);
   app.use('/api/schedule', scheduleRouter);
+  app.use('/api/assignments', assignmentsRouter);
+  app.use('/api/decisions', decisionsRouter);
 
   app.use(notFoundHandler);
   app.use(errorHandler);

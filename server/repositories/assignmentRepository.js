@@ -25,6 +25,12 @@ function listByOrderId(orderId) {
     .all(orderId);
 }
 
+// Marks an assignment no longer current — must run in the same transaction
+// as inserting its replacement, or the order briefly has zero current rows.
+function supersede(id) {
+  db.prepare(`UPDATE assignments SET is_current = 0 WHERE id = ?`).run(id);
+}
+
 // Read model for the schedule board: every current assignment joined with
 // its order and specialist, in start-time order.
 function listCurrentWithDetails() {
@@ -52,4 +58,4 @@ function listCurrentWithDetails() {
     .all();
 }
 
-module.exports = { create, findById, findCurrentByOrderId, listByOrderId, listCurrentWithDetails };
+module.exports = { create, findById, findCurrentByOrderId, listByOrderId, listCurrentWithDetails, supersede };

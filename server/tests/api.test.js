@@ -107,6 +107,9 @@ describe('GET /api/orders', () => {
 
 let scheduledOrderId;
 let secondScheduledOrderId;
+let scheduledAssignmentId;
+let thirdScheduledOrderId;
+let thirdScheduledAssignmentId;
 
 describe('POST /api/schedule/run + GET /api/schedule', () => {
   it('schedules the queued orders and the board reflects it', async () => {
@@ -116,7 +119,10 @@ describe('POST /api/schedule/run + GET /api/schedule', () => {
     expect(runRes.body.schedule).toHaveLength(runRes.body.scheduledCount);
 
     scheduledOrderId = runRes.body.schedule[0].orderId;
+    scheduledAssignmentId = runRes.body.schedule[0].assignmentId;
     secondScheduledOrderId = runRes.body.schedule[1]?.orderId;
+    thirdScheduledOrderId = runRes.body.schedule[2]?.orderId;
+    thirdScheduledAssignmentId = runRes.body.schedule[2]?.assignmentId;
 
     const boardRes = await request(app).get('/api/schedule');
     expect(boardRes.status).toBe(200);
@@ -182,5 +188,115 @@ describe('GET /api/orders/:id/explanation', () => {
     expect(second.status).toBe(200);
     expect(second.body.source).toBe('llm');
     expect(mockParse).toHaveBeenCalledTimes(2);
+  });
+});
+
+describe('POST /api/assignments/:id/accept', () => {
+  it('logs a human_accepted decision without changing the assignment', async () => {
+    const res = await request(app).post(`/api/assignments/${scheduledAssignmentId}/accept`).send();
+    expect(res.status).toBe(200);
+    expect(res.body).toMatchObject({
+      orderId: scheduledOrderId,
+      action: 'human_accepted',
+      newAssignmentId: scheduledAssignmentId,
+    });
+  });
+
+  it('404s for an unknown assignment', async () => {
+    const res = await request(app).post(`/api/assignments/${randomUUID()}/accept`).send();
+    expect(res.status).toBe(404);
+    expect(res.body.error).toBe('ASSIGNMENT_NOT_FOUND');
+  });
+
+  it('409s for an assignment that was already superseded', async () => {
+    // Accepting scheduledAssignmentId again is fine (accept doesn't supersede),
+    // but overriding it below will supersede it — then accept must 409.
+    if (!thirdScheduledAssignmentId) return;
+    const specialists = await request(app).get('/api/specialists');
+    const other = specialists.body[0];
+
+    const overrideRes = await request(app)
+      .post(`/api/assignments/${thirdScheduledAssignmentId}/override`)
+      .send({
+        specialistId: other.id,
+        plannedStart: new Date(Date.now() + 3600000).toISOString(),
+        plannedEnd: new Date(Date.now() + 7200000).toISOString(),
+        reason: 'test setup',
+      });
+    expect(overrideRes.status).toBe(200);
+
+    const acceptStale = await request(app).post(`/api/assignments/${thirdScheduledAssignmentId}/accept`).send();
+    expect(acceptStale.status).toBe(409);
+    expect(acceptStale.body.error).toBe('ASSIGNMENT_NOT_CURRENT');
+  });
+});
+
+describe('POST /api/assignments/:id/override', () => {
+  it('validates the body', async () => {
+    const res = await request(app).post(`/api/assignments/${scheduledAssignmentId}/override`).send({});
+    expect(res.status).toBe(400);
+    expect(res.body.error).toBe('SPECIALIST_ID_REQUIRED');
+  });
+
+  it('supersedes the old assignment, creates a new one, and logs the reason', async () => {
+    const specialists = await request(app).get('/api/specialists');
+    const target = specialists.body[0];
+
+    const plannedStart = new Date(Date.now() + 3600000).toISOString();
+    const plannedEnd = new Date(Date.now() + 7200000).toISOString();
+
+    const res = await request(app)
+      .post(`/api/assignments/${scheduledAssignmentId}/override`)
+      .send({ specialistId: target.id, plannedStart, plannedEnd, reason: 'specialist was busy with another client' });
+
+    expect(res.status).toBe(200);
+    expect(res.body.assignment).toMatchObject({ specialistId: target.id, orderId: scheduledOrderId });
+    expect(res.body.decision).toMatchObject({
+      action: 'human_overridden',
+      previousAssignmentId: scheduledAssignmentId,
+      reasonText: 'specialist was busy with another client',
+    });
+
+    // The old assignment is no longer current — the board's single row for
+    // this order must now be the new one.
+    const board = await request(app).get('/api/schedule');
+    const rowsForOrder = board.body.filter(e => e.orderId === scheduledOrderId);
+    expect(rowsForOrder).toHaveLength(1);
+    expect(rowsForOrder[0].assignmentId).toBe(res.body.assignment.assignmentId);
+  });
+
+  it('404s when the target specialist does not exist', async () => {
+    if (!secondScheduledOrderId) return;
+    const boardRes = await request(app).get('/api/schedule');
+    const entry = boardRes.body.find(e => e.orderId === secondScheduledOrderId);
+    if (!entry) return;
+
+    const res = await request(app)
+      .post(`/api/assignments/${entry.assignmentId}/override`)
+      .send({
+        specialistId: randomUUID(),
+        plannedStart: new Date(Date.now() + 3600000).toISOString(),
+        plannedEnd: new Date(Date.now() + 7200000).toISOString(),
+      });
+    expect(res.status).toBe(404);
+    expect(res.body.error).toBe('SPECIALIST_NOT_FOUND');
+  });
+});
+
+describe('GET /api/decisions', () => {
+  it('lists decisions, most recent first, filterable by orderId', async () => {
+    const res = await request(app).get('/api/decisions').query({ orderId: scheduledOrderId, limit: 50 });
+    expect(res.status).toBe(200);
+    expect(res.body.length).toBeGreaterThanOrEqual(2); // ai_proposed + human_overridden at least
+    expect(res.body.every(d => d.orderId === scheduledOrderId)).toBe(true);
+    const actions = res.body.map(d => d.action);
+    expect(actions).toContain('ai_proposed');
+    expect(actions).toContain('human_overridden');
+  });
+
+  it('returns decisions across all orders when orderId is omitted', async () => {
+    const res = await request(app).get('/api/decisions').query({ limit: 200 });
+    expect(res.status).toBe(200);
+    expect(res.body.length).toBeGreaterThan(0);
   });
 });

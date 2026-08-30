@@ -16,4 +16,13 @@ class NotFoundError extends Error {
   }
 }
 
-module.exports = { ValidationError, NotFoundError };
+class ConflictError extends Error {
+  constructor(code, message) {
+    super(message);
+    this.name = 'ConflictError';
+    this.code = code;
+    this.statusCode = 409;
+  }
+}
+
+module.exports = { ValidationError, NotFoundError, ConflictError };

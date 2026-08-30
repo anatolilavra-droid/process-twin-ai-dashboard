@@ -2,7 +2,7 @@
 
 Research prototype: a simulated operational process (order intake → scheduling → explanation → human override) for a small service company, built to explore how AI can support — not replace — operational decisions.
 
-**Status:** Stage A complete (synthetic orders, heuristic scheduler, live dashboard board). Stage B in progress: AI explanations are wired up (`GET /api/orders/:id/explanation`); human override is not built yet.
+**Status:** Stage A complete (synthetic orders, heuristic scheduler, live dashboard board). Stage B backend complete: AI explanations, accept/override, and decision history are all wired up. Stage B frontend (surfacing explanations and override in the UI) is next.
 
 See [`CLAUDE.md`](./CLAUDE.md) for the full project context, constraints, research questions, and development plan (Stage A–D).
 
@@ -53,9 +53,13 @@ See [`CLAUDE.md`](./CLAUDE.md#2-исследовательские-вопрос�
 
 Requires `ANTHROPIC_API_KEY` in `server/.env`. Without it (or if the call fails for any reason), the endpoint degrades to a deterministic template built from the same raw factors — `confidence: "low"`, `source: "fallback"` — instead of a 500. Fallback responses aren't cached, so the next call retries the LLM; real explanations are cached in the `explanations` table (see `server/db/migrations/004_explanations.sql`).
 
+## Human override
+
+`POST /api/assignments/:id/accept` logs the operator's acceptance without changing anything. `POST /api/assignments/:id/override` (`{specialistId, plannedStart, plannedEnd, reason?}`) supersedes the current assignment, creates a new `created_by: "human"` one, and logs the reason — all in one transaction. `GET /api/decisions?orderId=` returns the full `ai_proposed` → `human_accepted`/`human_overridden` history for an order. Override does **not** block assigning a specialist whose type doesn't match the order's `required_specialist_type` — that's deliberate (see `docs/spec.md`), not an oversight.
+
 ## Known limitations (Stage A/B)
 
 - No authentication — single-tenant, permissive CORS, not a production posture.
 - Scheduler is a deterministic heuristic (earliest-deadline-first + type priority), not a learned model — see `server/services/schedulingService.js`.
 - Scheduler ignores specialists' `hours_per_day` and day/working-hours boundaries; treats them as available back-to-back from the reference time.
-- No human override yet — accepting/overriding a plan and logging the decision is the next Stage B piece.
+- No frontend for explanations/override yet — API only, see below.

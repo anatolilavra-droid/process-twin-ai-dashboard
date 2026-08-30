@@ -48,4 +48,22 @@ function serializeExplanation(row) {
   };
 }
 
-module.exports = { serializeOrder, serializeSpecialist, serializeScheduleEntry, serializeExplanation };
+function serializeDecision(row) {
+  return {
+    id: row.id,
+    orderId: row.order_id,
+    action: row.action,
+    previousAssignmentId: row.previous_assignment_id,
+    newAssignmentId: row.new_assignment_id,
+    reasonText: row.reason_text,
+    createdAt: row.created_at,
+  };
+}
+
+module.exports = {
+  serializeOrder,
+  serializeSpecialist,
+  serializeScheduleEntry,
+  serializeExplanation,
+  serializeDecision,
+};

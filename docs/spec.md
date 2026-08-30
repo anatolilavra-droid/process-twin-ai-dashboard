@@ -14,7 +14,7 @@ Small service company (workshop / IT service / cleaning — the schema is neutra
 | `orders` | `id`, `order_type` (CHECK), `required_specialist_type`, `estimated_hours`, `requires_equipment`, `created_at`, `deadline_at`, `status` (CHECK: queued/scheduled/in_progress/done/overdue) | |
 | `assignments` | `id`, `order_id`, `specialist_id`, `planned_start`, `planned_end`, `created_by` (ai/human), `is_current` | Partial unique index enforces at most one `is_current=1` row per `order_id` |
 | `explanations` | `id`, `assignment_id` (unique), `factors_json`, `summary_text`, `confidence`, `source` (llm/fallback), `created_at` | One per assignment; overriding creates a new assignment and thus a fresh explanation |
-| `decision_log` | — | Not yet migrated (Stage B override work, not built yet) |
+| `decision_log` | `id`, `order_id`, `action` (CHECK: ai_proposed/human_accepted/human_overridden), `previous_assignment_id`, `new_assignment_id`, `reason_text`, `created_at` | One row per decision; `schedule/run` logs `ai_proposed` for every assignment it creates |
 
 ## API surface (`server/routes/`)
 
@@ -24,8 +24,11 @@ Small service company (workshop / IT service / cleaning — the schema is neutra
 | `GET` | `/api/orders` | `?status=&limit=&offset=` |
 | `GET` | `/api/orders/:id/explanation` | Stage B — see below |
 | `GET` | `/api/specialists` | |
-| `POST` | `/api/schedule/run` | Persists the planner's output in one transaction |
+| `POST` | `/api/schedule/run` | Persists the planner's output in one transaction, logs `ai_proposed` per assignment |
 | `GET` | `/api/schedule` | Current board (joined assignments+orders+specialists) |
+| `POST` | `/api/assignments/:id/accept` | Logs `human_accepted`; assignment unchanged. 404 unknown, 409 if already superseded |
+| `POST` | `/api/assignments/:id/override` | `{specialistId, plannedStart, plannedEnd, reason?}` — supersedes the old assignment, creates a new `created_by: "human"` one, logs `human_overridden` with the reason |
+| `GET` | `/api/decisions` | `?orderId=&limit=&offset=`, most recent first |
 
 ## Scheduler (`server/services/schedulingService.js`)
 
@@ -41,8 +44,11 @@ Model: `claude-opus-5` (the `claude-api` skill's mandatory default absent an exp
 
 On any failure (no `ANTHROPIC_API_KEY`, network, schema mismatch), falls back to a deterministic template built from the same raw factors — `confidence: "low"`, `source: "fallback"` — and is **not** cached, so the next request retries the LLM rather than being stuck on a degraded answer.
 
+## Override / accept (`server/services/decisionService.js`, Stage B)
+
+Override does **not** enforce that the target specialist's `specialist_type` matches the order's `required_specialist_type` — that's deliberate: the scheduler enforces it because it has no other signal, but a human operator overriding may know something the scheduler doesn't (the whole point of human-in-the-loop). The frontend should still surface the specialist's type so the operator can judge the mismatch themselves, rather than hiding it.
+
 ## Not built yet
 
-- Human override / accept flow and `decision_log` (rest of Stage B).
 - Metrics (% on-time, avg processing time, override rate) and history UI (Stage C).
 - Demo script, "For Researchers" page (Stage D).
