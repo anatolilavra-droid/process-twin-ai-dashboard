@@ -2,7 +2,7 @@
 
 Research prototype: a simulated operational process (order intake → scheduling → explanation → human override) for a small service company, built to explore how AI can support — not replace — operational decisions.
 
-**Status:** Stage A, B, and C complete — synthetic orders, heuristic scheduler, AI explanations, human accept/override, and metrics/decision-history, end to end from the API through the UI. Stage D (demo script, "For Researchers" page) is next.
+**Status:** Stages A–D complete. Synthetic orders, heuristic scheduler, AI explanations, human accept/override, metrics/decision-history, a demo script, and a "For Researchers" page — all live, end to end from the API through the UI. See [`docs/demo-script.md`](docs/demo-script.md) for a guided 3–5 minute walkthrough.
 
 See [`CLAUDE.md`](./CLAUDE.md) for the full project context, constraints, research questions, and development plan (Stage A–D).
 
@@ -23,6 +23,10 @@ Overriding to a specialist whose type doesn't match the order's requirement — 
 Metrics and decision history after a schedule run plus one accept and one override — note the metrics move (100% planned on-time, 10% override rate) and the history reads bottom-up as `AI proposed → Accepted` / `AI proposed → Overridden` with the operator's reason:
 
 ![Metrics tiles and decision history timeline](docs/screenshots/metrics-and-history.png)
+
+The "For Researchers" tab — same research questions as below, framed for an outside reader, with an honest limitations list and contact:
+
+![For Researchers page with research questions, architecture, and limitations](docs/screenshots/for-researchers.png)
 
 ## Structure
 
@@ -84,7 +88,11 @@ Requires `ANTHROPIC_API_KEY` in `server/.env`. Without it (or if the call fails 
 
 `GET /api/metrics` returns three numbers, rendered as `MetricsPanel.jsx`: `plannedOnTimeRate`, `avgProcessingHours`, `overrideRate`. All three are `null` (never `0`) when there's no data yet, so an empty dashboard reads as "no data" rather than a misleading 0%. `plannedOnTimeRate` is named deliberately — it's whether the *current plan* meets each deadline, not whether work actually finished on time (see "Known limitations"). `HistoryTimeline.jsx` lists every `GET /api/decisions` entry, newest first, with the operator's reason where one was given.
 
-## Known limitations (Stage A–C)
+## For Researchers page and demo script
+
+The `For Researchers` tab in the app (`web/src/pages/ForResearchers.jsx`) is a static, researcher-facing view of the same research questions, an architecture summary, the limitations list, and contact info — meant to be shown, not just read as markdown. [`docs/demo-script.md`](docs/demo-script.md) is a step-by-step ~3–5 minute live walkthrough of the whole app (generate → schedule → explain → override → metrics/history → this tab), written for presenting to an audience that hasn't seen the project before.
+
+## Known limitations (Stage A–D)
 
 - No authentication — single-tenant, permissive CORS, not a production posture.
 - Scheduler is a deterministic heuristic (earliest-deadline-first + type priority), not a learned model — see `server/services/schedulingService.js`.

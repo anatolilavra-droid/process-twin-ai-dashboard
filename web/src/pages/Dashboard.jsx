@@ -102,7 +102,7 @@ function Dashboard() {
     <div className="mx-auto flex min-h-screen max-w-6xl flex-col gap-4 px-4 py-6 sm:px-6">
       <header className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <p className="text-xs font-semibold uppercase tracking-widest text-accent">Stage C</p>
+          <p className="text-xs font-semibold uppercase tracking-widest text-accent">Research prototype</p>
           <h1 className="text-2xl font-bold text-ink">Process Twin AI Dashboard</h1>
         </div>
         <div className="flex gap-2">

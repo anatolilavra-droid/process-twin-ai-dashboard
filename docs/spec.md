@@ -65,6 +65,12 @@ All three are `null` (never `0`) when their denominator is empty, so an empty da
 
 `MetricsPanel.jsx` renders the three tiles; `HistoryTimeline.jsx` lists `GET /api/decisions` newest-first with the reason text when present. Both refresh alongside the rest of `Dashboard.jsx`'s state after every action (generate/schedule/accept/override).
 
+## Demo / researcher-facing surfaces (Stage D)
+
+`App.jsx` now holds a two-tab shell (no router — just component-swap state) between `pages/Dashboard.jsx` (the operational view) and `pages/ForResearchers.jsx` (static: research questions, architecture summary, limitations, contact — the same content as this file's summary, written for someone outside the project). `docs/demo-script.md` is the live walkthrough script; it doesn't add any code, just documents a sequence through the existing features.
+
 ## Not built yet
+
+Nothing from the original Stage A–D plan. Anything past this is a new decision, not a backlog item — see `CLAUDE.md`'s research questions for where a next iteration (a real user study, actual completion tracking) would go.
 
 - Demo script, "For Researchers" page (Stage D).
