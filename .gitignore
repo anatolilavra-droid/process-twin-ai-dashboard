@@ -1,0 +1,10 @@
+# Server
+server/node_modules
+server/.env
+server/*.sqlite
+server/*.sqlite3
+server/*.db
+
+# General
+.DS_Store
+*.log
