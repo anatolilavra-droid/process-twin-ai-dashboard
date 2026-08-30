@@ -1,6 +1,7 @@
 # Server
 server/node_modules
 server/.env
+server/data/
 server/*.sqlite
 server/*.sqlite3
 server/*.db
