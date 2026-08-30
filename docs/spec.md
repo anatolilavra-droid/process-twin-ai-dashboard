@@ -29,6 +29,7 @@ Small service company (workshop / IT service / cleaning — the schema is neutra
 | `POST` | `/api/assignments/:id/accept` | Logs `human_accepted`; assignment unchanged. 404 unknown, 409 if already superseded |
 | `POST` | `/api/assignments/:id/override` | `{specialistId, plannedStart, plannedEnd, reason?}` — supersedes the old assignment, creates a new `created_by: "human"` one, logs `human_overridden` with the reason |
 | `GET` | `/api/decisions` | `?orderId=&limit=&offset=`, most recent first |
+| `GET` | `/api/metrics` | `plannedOnTimeRate` / `avgProcessingHours` / `overrideRate` — see below |
 
 ## Scheduler (`server/services/schedulingService.js`)
 
@@ -52,7 +53,17 @@ Override does **not** enforce that the target specialist's `specialist_type` mat
 
 `pages/Dashboard.jsx` orchestrates: generate/schedule buttons, `components/OrderQueue.jsx` (unassigned orders), `components/ProcessBoard.jsx` (one column per specialist, cards clickable). Clicking a card opens `components/OverridePlanModal.jsx`, which embeds `components/ExplanationPanel.jsx` (fetches and renders the explanation, including the fallback notice when `source: "fallback"`) plus Accept and Override controls. See `docs/screenshots/`.
 
+## Metrics (`server/services/metricsService.js`, Stage C)
+
+The three metrics CLAUDE.md names ("% заказов в дедлайн, среднее время обработки, доля override") computed only from data this prototype actually tracks:
+
+- `plannedOnTimeRate` — of currently-planned assignments, the share whose `planned_end` is still before the order's `deadline_at`. This is **prospective** ("is the current plan on track"), not "did the work actually finish on time" — there is no order-completion event anywhere in the app (no route ever sets `status: 'done'`), so a real on-time-completion rate isn't something this prototype can honestly report yet. Don't rename this to "on-time rate" without adding real completion tracking first.
+- `avgProcessingHours` — mean `estimated_hours` across current assignments.
+- `overrideRate` — `human_overridden` / `ai_proposed` decision counts, all-time (not just current assignments).
+
+All three are `null` (never `0`) when their denominator is empty, so an empty dashboard reads as "no data" rather than a misleading 0%. `sampleSize` in the response carries the underlying counts.
+
 ## Not built yet
 
-- Metrics (% on-time, avg processing time, override rate) and history UI (Stage C).
+- Decision-history UI (list view over `GET /api/decisions`) — metrics are done, history view isn't yet.
 - Demo script, "For Researchers" page (Stage D).

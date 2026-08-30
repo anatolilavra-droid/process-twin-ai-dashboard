@@ -21,4 +21,11 @@ function list({ orderId, limit = 50, offset = 0 } = {}) {
   return db.prepare(`SELECT * FROM decision_log ORDER BY created_at DESC LIMIT ? OFFSET ?`).all(limit, offset);
 }
 
-module.exports = { create, findById, list };
+function countsByAction() {
+  const rows = db.prepare(`SELECT action, COUNT(*) AS count FROM decision_log GROUP BY action`).all();
+  const counts = { ai_proposed: 0, human_accepted: 0, human_overridden: 0 };
+  for (const row of rows) counts[row.action] = row.count;
+  return counts;
+}
+
+module.exports = { create, findById, list, countsByAction };

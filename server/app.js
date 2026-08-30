@@ -5,6 +5,7 @@ const specialistsRouter = require('./routes/specialists');
 const scheduleRouter = require('./routes/schedule');
 const assignmentsRouter = require('./routes/assignments');
 const decisionsRouter = require('./routes/decisions');
+const metricsRouter = require('./routes/metrics');
 const notFoundHandler = require('./middleware/notFoundHandler');
 const errorHandler = require('./middleware/errorHandler');
 
@@ -24,6 +25,7 @@ function createApp() {
   app.use('/api/schedule', scheduleRouter);
   app.use('/api/assignments', assignmentsRouter);
   app.use('/api/decisions', decisionsRouter);
+  app.use('/api/metrics', metricsRouter);
 
   app.use(notFoundHandler);
   app.use(errorHandler);

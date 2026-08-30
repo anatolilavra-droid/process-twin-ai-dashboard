@@ -300,3 +300,13 @@ describe('GET /api/decisions', () => {
     expect(res.body.length).toBeGreaterThan(0);
   });
 });
+
+describe('GET /api/metrics', () => {
+  it('reflects the scheduling/override activity from earlier tests', async () => {
+    const res = await request(app).get('/api/metrics');
+    expect(res.status).toBe(200);
+    expect(res.body.overrideRate).toBeGreaterThan(0); // the override test above already ran
+    expect(res.body.sampleSize.aiProposedDecisions).toBeGreaterThan(0);
+    expect(typeof res.body.avgProcessingHours).toBe('number');
+  });
+});
