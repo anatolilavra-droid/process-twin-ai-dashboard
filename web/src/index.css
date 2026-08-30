@@ -1,1 +1,22 @@
 @import "tailwindcss";
+
+@theme {
+  --font-sans: "Fira Sans", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "Fira Code", ui-monospace, SFMono-Regular, Menlo, monospace;
+
+  --color-bg: #020617;
+  --color-surface: #0e1223;
+  --color-surface-2: #161b30;
+  --color-border: #263045;
+  --color-ink: #f8fafc;
+  --color-ink-muted: #94a3b8;
+  --color-ink-faint: #64748b;
+
+  --color-accent: #6366f1;
+
+  --color-status-queued: #f59e0b;
+  --color-status-scheduled: #38bdf8;
+  --color-status-inprogress: #a78bfa;
+  --color-status-done: #34d399;
+  --color-status-overdue: #f87171;
+}
