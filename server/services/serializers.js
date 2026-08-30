@@ -37,4 +37,15 @@ function serializeScheduleEntry(row) {
   };
 }
 
-module.exports = { serializeOrder, serializeSpecialist, serializeScheduleEntry };
+function serializeExplanation(row) {
+  return {
+    assignmentId: row.assignment_id,
+    topFactors: row.factors.topFactors,
+    summaryText: row.summary_text,
+    confidence: row.confidence,
+    source: row.source,
+    createdAt: row.created_at,
+  };
+}
+
+module.exports = { serializeOrder, serializeSpecialist, serializeScheduleEntry, serializeExplanation };

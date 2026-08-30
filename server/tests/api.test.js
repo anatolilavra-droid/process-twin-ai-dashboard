@@ -11,6 +11,13 @@ const fs = require('fs');
 const os = require('os');
 const { randomUUID } = require('crypto');
 
+// Explanations go through the LLM — mocked here so the API suite stays
+// hermetic and doesn't depend on a live ANTHROPIC_API_KEY.
+const mockParse = jest.fn();
+jest.mock('@anthropic-ai/sdk', () =>
+  jest.fn().mockImplementation(() => ({ messages: { parse: mockParse } }))
+);
+
 const tmpDbPath = path.join(
   os.tmpdir(),
   `process-twin-test-${Date.now()}-${Math.random().toString(36).slice(2)}.db`
@@ -98,12 +105,18 @@ describe('GET /api/orders', () => {
   });
 });
 
+let scheduledOrderId;
+let secondScheduledOrderId;
+
 describe('POST /api/schedule/run + GET /api/schedule', () => {
   it('schedules the queued orders and the board reflects it', async () => {
     const runRes = await request(app).post('/api/schedule/run').send({});
     expect(runRes.status).toBe(200);
     expect(runRes.body.scheduledCount).toBeGreaterThan(0);
     expect(runRes.body.schedule).toHaveLength(runRes.body.scheduledCount);
+
+    scheduledOrderId = runRes.body.schedule[0].orderId;
+    secondScheduledOrderId = runRes.body.schedule[1]?.orderId;
 
     const boardRes = await request(app).get('/api/schedule');
     expect(boardRes.status).toBe(200);
@@ -117,5 +130,57 @@ describe('POST /api/schedule/run + GET /api/schedule', () => {
 
     const scheduledOrders = await request(app).get('/api/orders').query({ status: 'scheduled', limit: 200 });
     expect(scheduledOrders.body.length).toBe(runRes.body.scheduledCount);
+  });
+});
+
+describe('GET /api/orders/:id/explanation', () => {
+  afterEach(() => {
+    mockParse.mockReset();
+  });
+
+  it('404s for an unknown order', async () => {
+    const res = await request(app).get(`/api/orders/${randomUUID()}/explanation`);
+    expect(res.status).toBe(404);
+    expect(res.body.error).toBe('ORDER_NOT_FOUND');
+  });
+
+  it('returns an LLM explanation and caches it on the second call', async () => {
+    const parsedOutput = {
+      topFactors: [{ factor: 'deadline', description: 'Close deadline', impact: 'high' }],
+      summaryText: 'Scheduled early because of its deadline.',
+      confidence: 'high',
+    };
+    mockParse.mockResolvedValueOnce({ parsed_output: parsedOutput });
+
+    const first = await request(app).get(`/api/orders/${scheduledOrderId}/explanation`);
+    expect(first.status).toBe(200);
+    expect(first.body).toMatchObject({ summaryText: parsedOutput.summaryText, confidence: 'high', source: 'llm' });
+    expect(mockParse).toHaveBeenCalledTimes(1);
+
+    // Second call should hit the persisted cache, not call the LLM again.
+    const second = await request(app).get(`/api/orders/${scheduledOrderId}/explanation`);
+    expect(second.status).toBe(200);
+    expect(second.body.summaryText).toBe(parsedOutput.summaryText);
+    expect(mockParse).toHaveBeenCalledTimes(1);
+  });
+
+  it('degrades to a fallback explanation (not cached) when the LLM call fails', async () => {
+    if (!secondScheduledOrderId) return; // only >=2 orders got scheduled sometimes, skip if not
+
+    mockParse.mockRejectedValueOnce(new Error('simulated outage'));
+
+    const first = await request(app).get(`/api/orders/${secondScheduledOrderId}/explanation`);
+    expect(first.status).toBe(200);
+    expect(first.body.source).toBe('fallback');
+    expect(first.body.confidence).toBe('low');
+
+    // Not cached: a second call retries the LLM instead of reading a stale fallback.
+    mockParse.mockResolvedValueOnce({
+      parsed_output: { topFactors: [{ factor: 'deadline', description: 'x', impact: 'low' }], summaryText: 'ok', confidence: 'medium' },
+    });
+    const second = await request(app).get(`/api/orders/${secondScheduledOrderId}/explanation`);
+    expect(second.status).toBe(200);
+    expect(second.body.source).toBe('llm');
+    expect(mockParse).toHaveBeenCalledTimes(2);
   });
 });

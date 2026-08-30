@@ -13,10 +13,12 @@
     "test": "jest --runInBand"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.122.0",
     "better-sqlite3": "^11.3.0",
     "cors": "^2.8.6",
     "dotenv": "^16.4.5",
-    "express": "^4.21.0"
+    "express": "^4.21.0",
+    "zod": "^4.5.4"
   },
   "devDependencies": {
     "jest": "^30.4.2",
