@@ -1,0 +1,19 @@
+services:
+  - type: web
+    name: process-twin-server
+    runtime: node
+    plan: free
+    rootDir: server
+    buildCommand: npm install
+    # Render's free plan has no persistent disk — a spin-down/spin-up cycle
+    # (after ~15 min idle) starts a fresh filesystem, so the SQLite file is
+    # gone. migrate/seed are both idempotent (CREATE TABLE IF NOT EXISTS /
+    # skip-if-already-seeded), so running them on every start is safe and
+    # keeps the app usable after a cold start instead of crashing on a
+    # missing schema.
+    startCommand: npm run migrate && npm run seed && npm start
+    envVars:
+      - key: ANTHROPIC_API_KEY
+        sync: false
+      - key: DB_PATH
+        value: ./data/process-twin.sqlite

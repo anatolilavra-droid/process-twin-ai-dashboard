@@ -6,6 +6,8 @@ Research prototype: a simulated operational process (order intake → scheduling
 
 See [`CLAUDE.md`](./CLAUDE.md) for the full project context, constraints, research questions, and development plan (Stage A–D).
 
+**Live demo:** `https://anatolilavra-droid.github.io/process-twin-ai-dashboard/` once [`docs/deployment.md`](docs/deployment.md)'s steps are done (repo made public, backend deployed, Pages turned on) — the config for both halves is already in this repo, only account-level clicks are left, and this link is dead until those are done.
+
 ## Screenshots
 
 Board after generating and scheduling 10 synthetic orders — three specialist columns, empty queue:
@@ -64,6 +66,10 @@ Runs on `http://localhost:5173`.
 cd server
 npm test
 ```
+
+## Deployment
+
+`render.yaml` (backend) and `.github/workflows/deploy-pages.yml` (frontend) are ready to go — [`docs/deployment.md`](docs/deployment.md) has the exact remaining steps (all one-time account/settings clicks: make the repo public, deploy the Render blueprint, set one GitHub Actions variable, turn on Pages).
 
 ## Research questions
 
