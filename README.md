@@ -6,7 +6,11 @@ Research prototype: a simulated operational process (order intake → scheduling
 
 See [`CLAUDE.md`](./CLAUDE.md) for the full project context, constraints, research questions, and development plan (Stage A–D).
 
-**Live demo:** `https://anatolilavra-droid.github.io/process-twin-ai-dashboard/` once [`docs/deployment.md`](docs/deployment.md)'s steps are done (repo made public, backend deployed, Pages turned on) — the config for both halves is already in this repo, only account-level clicks are left, and this link is dead until those are done.
+## 🔗 Live demo
+
+**[anatolilavra-droid.github.io/process-twin-ai-dashboard](https://anatolilavra-droid.github.io/process-twin-ai-dashboard/)**
+
+Frontend on GitHub Pages, backend on Render's free tier. Click **Generate orders** then **Run scheduler** to populate the board. First request after a period of inactivity can take ~30–50s (Render's free plan spins the backend down when idle) — that's expected, not a bug; see [`docs/deployment.md`](docs/deployment.md) for details.
 
 ## Screenshots
 
