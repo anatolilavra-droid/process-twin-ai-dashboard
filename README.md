@@ -1,10 +1,32 @@
 # Process Twin AI Dashboard
 
-Research prototype: a simulated operational process (order intake → scheduling → explanation → human override) for a small service company, built to explore how AI can support — not replace — operational decisions.
+Research prototype: a simulated operational process (order intake → scheduling → explanation → human override) for a small service company, built to explore how AI can support — not replace — operational decisions in human-in-the-loop, explainable-AI settings.
 
-**Status:** Stages A–D complete. Synthetic orders, heuristic scheduler, AI explanations, human accept/override, metrics/decision-history, a demo script, and a "For Researchers" page — all live, end to end from the API through the UI. See [`docs/demo-script.md`](docs/demo-script.md) for a guided 3–5 minute walkthrough.
+**Status: Stage 0 — a research instrument, not a research result.** "Stages A–D" below refers to *implementation* milestones (all done, live end to end); it's a different axis from the *research* readiness stage, which is Stage 0: the tool to run a study on exists, no study has run yet, and this README says so at every claim, not just here. See [`docs/demo-script.md`](docs/demo-script.md) for a guided 3–5 minute walkthrough, or [`CLAUDE.md`](./CLAUDE.md) for the full project context and the anti-hallucination constraints this project (and this README) is written under.
 
-See [`CLAUDE.md`](./CLAUDE.md) for the full project context, constraints, research questions, and development plan (Stage A–D).
+## Research overview
+
+Three research questions this prototype can answer *today*, without adding anything — each with a stated hypothesis, and the exact field/endpoint it's measured from. Full detail, including a proposed experiment design, sample-size reasoning, and an ethics section that says plainly what it doesn't know, is in [`docs/experiment-design.md`](docs/experiment-design.md). A publication-oriented outline (not a paper — an outline, so the shape of a future paper is visible) is in [`docs/research-paper-outline.md`](docs/research-paper-outline.md).
+
+*(For the broader, four motivating questions this project was originally framed around — how to visualize AI decisions, which explanation types help, how to design override interfaces, how to measure impact — see `CLAUDE.md`'s "Исследовательские вопросы". The three below are the subset of that framing this prototype can currently test, not a replacement for it.)*
+
+| # | Research question | Hypothesis | Measured from |
+|---|---|---|---|
+| RQ1 | Does a real AI-generated explanation (vs. the deterministic fallback template) change override behavior? | Exploratory, not confidently directional — could go either way (more specific reasoning could raise or lower trust). Stated as a two-tailed question on purpose. | `overrideRate` in `GET /api/metrics`, segmented by `explanationSource` in `GET /api/decisions/export` |
+| RQ2 | Does the explanation's stated confidence level predict accept vs. override? | Decisions where the explanation's confidence was `low` are overridden more often than `high`-confidence ones. | `explanationConfidence` in `GET /api/decisions/export`, cross-tabbed with `action` |
+| RQ3 | Does deciding take longer for an override than an accept? | Yes — overriding requires opening a dropdown, adjusting two datetime fields, and optionally writing a reason; accepting is one click. Grounded in the UI itself, not a guess. | `avgDecisionLatencySeconds` in `GET /api/metrics`; per-decision `decisionLatencySeconds` in the export |
+
+**What isn't measurable yet, on purpose not glossed over:** subjective trust and cognitive load need a self-report instrument (a questionnaire) that doesn't exist in this app — a behavioral proxy like override rate is not the same claim as "trust", and this project doesn't conflate them. Per-participant identity also isn't tracked (no `participant_id` field exists) — the current workaround is one fresh database per participant, documented in `docs/experiment-design.md`.
+
+**Metrics already computed** (`GET /api/metrics`, `server/services/metricsService.js`): `plannedOnTimeRate`, `avgProcessingHours`, `overrideRate`, `avgDecisionLatencySeconds` — all `null` (never `0`) with no data, so an empty dashboard reads as "no data", not a misleading 0%. All four are computed from real request/decision timestamps, not synthetic placeholders. See "Metrics and decision history" below for what each one actually claims (and, for `plannedOnTimeRate` and `overrideRate`, what it deliberately does *not* claim).
+
+**Experiment design (proposed, not run):** within-subjects, counterbalanced — condition A (real LLM explanation) vs. condition B (fallback-only, forced by unsetting `ANTHROPIC_API_KEY`), each participant does both. Full protocol, task description, and a named operational gap (no in-app toggle for condition B yet — it's a server restart) are in [`docs/experiment-design.md`](docs/experiment-design.md), not repeated here to avoid two documents drifting apart.
+
+## Collaboration interest
+
+Author: Anatoli Lavra, independent AI-driven architect & product creator, based in Leipzig, Germany — see [`docs/research-paper-outline.md`](docs/research-paper-outline.md) and the "For Researchers" tab in the live app for more.
+
+Open to research collaboration in whatever form actually fits — a research-assistant or project-based role, contract research, or a longer academic path if that turns out to be the right one — rather than committing to one format here without knowing what a given institute actually has available. If a Fraunhofer group (or any lab working on human-in-the-loop / explainable AI in operational settings) has something this prototype could plug into, or an open position this profile fits, that's the conversation worth having.
 
 ## 🔗 Live demo
 
@@ -113,26 +135,14 @@ npm test    # Vitest — 33 tests: lib/format.js, api/client.js, OrderTypeTag, S
 
 `render.yaml` (backend) and `.github/workflows/deploy-pages.yml` (frontend) are ready to go — [`docs/deployment.md`](docs/deployment.md) has the exact remaining steps (all one-time account/settings clicks: make the repo public, deploy the Render blueprint, set one GitHub Actions variable, turn on Pages).
 
-## Research questions
+## Original motivating questions
 
-Four questions this prototype is built to let someone investigate (full text in [`CLAUDE.md`](./CLAUDE.md#2-исследовательские-вопросы)) — **no user testing has been run yet, so there are no findings below, only what the prototype currently makes measurable:**
+The four broad questions this project was originally framed around (full text in [`CLAUDE.md`](./CLAUDE.md#2-исследовательские-вопросы)) — the "Research overview" section above is the narrower, currently-testable subset of these, not a replacement:
 
 1. **How should AI decisions be visualized so non-experts understand the logic and trust the system?** `ExplanationPanel.jsx` is one candidate answer (top-3 factors + plain-language summary) — untested against alternatives (causal graphs, feature-importance charts, etc.).
 2. **Which explanation types (causal, feature-importance, "what-if") are most useful to operators?** Only one type is implemented (a rule-trace narrated by an LLM, see "AI explanations" below) — comparing it against others needs a study this repo doesn't run.
 3. **How should human-in-the-loop interfaces be designed so a person can override an AI decision?** `OverridePlanModal.jsx` + `decision_log` make the override flow and its outcomes observable (`overrideRate` in `GET /api/metrics`) — but override behavior hasn't been measured with real operators, only exercised manually.
 4. **How is the impact of AI recommendations on decision quality measured (time, deadlines, satisfaction)?** `plannedOnTimeRate` and `avgProcessingHours` are a first, honestly-scoped attempt (see "Known limitations" — no real completion tracking exists) — deadline/time are covered, satisfaction is not.
-
-## Research design
-
-**This prototype is Stage 0 — an instrument to run a study on, not a study that has run.** The four broad questions above frame the project; [`docs/experiment-design.md`](docs/experiment-design.md) narrows that down to 3 specific, currently-answerable research questions with stated hypotheses, an experiment design (within-subjects, counterbalanced, proposed sample size range with the reasoning behind it), and an honest ethics section (including what this project genuinely cannot state, like whether formal ethics-committee approval is required — that depends on institutional context this repo doesn't have information about).
-
-The 3 RQs (full detail, including the exact fields and code they're computed from, in the linked doc):
-
-1. Does a real AI-generated explanation (vs. the deterministic fallback) change override behavior?
-2. Does the explanation's stated confidence level predict accept vs. override?
-3. Does deciding take longer for an override than an accept?
-
-All three are answerable today from `GET /api/metrics` (now including `avgDecisionLatencySeconds`) and the new `GET /api/decisions/export` (`?format=csv` or `?format=json`) — every decision, joined with order type, the explanation shown at decision time, and decision latency, for analysis outside the app. What's explicitly *not* measurable yet — subjective trust, cognitive load, per-participant identity — is named as such in `docs/experiment-design.md`, not glossed over.
 
 ## AI explanations
 
@@ -148,7 +158,7 @@ Requires `ANTHROPIC_API_KEY` in `server/.env`. Without it (or if the call fails 
 
 `GET /api/metrics` returns four numbers, rendered as `MetricsPanel.jsx`: `plannedOnTimeRate`, `avgProcessingHours`, `overrideRate`, `avgDecisionLatencySeconds`. All four are `null` (never `0`) when there's no data yet, so an empty dashboard reads as "no data" rather than a misleading 0%. `plannedOnTimeRate` is named deliberately — it's whether the *current plan* meets each deadline, not whether work actually finished on time (see "Known limitations"). `avgDecisionLatencySeconds` is the time from an order's AI proposal to the operator's first accept/override, computed from timestamps already being logged — see `docs/spec.md`. `HistoryTimeline.jsx` lists every `GET /api/decisions` entry, newest first, with the operator's reason where one was given.
 
-`GET /api/decisions/export` (`?format=csv` or `?format=json`) pulls every decision out for offline analysis — order type, action, the explanation shown at decision time, reason text, and decision latency, joined in one row. Not used by the app's own UI; built for research use (see "Research design" above).
+`GET /api/decisions/export` (`?format=csv` or `?format=json`) pulls every decision out for offline analysis — order type, action, the explanation shown at decision time, reason text, and decision latency, joined in one row. Not used by the app's own UI; built for research use (see "Research overview" above).
 
 ## Accessibility
 
