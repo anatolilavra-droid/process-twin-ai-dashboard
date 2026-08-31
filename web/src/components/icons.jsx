@@ -47,3 +47,12 @@ export function CircleDotIcon({ className }) {
     </svg>
   );
 }
+
+export function ContrastIcon({ className }) {
+  return (
+    <svg {...baseProps(className)}>
+      <circle cx="10" cy="10" r="7" />
+      <path d="M10 3a7 7 0 0 1 0 14V3Z" fill="currentColor" stroke="none" />
+    </svg>
+  );
+}

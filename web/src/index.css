@@ -20,3 +20,48 @@
   --color-status-done: #34d399;
   --color-status-overdue: #f87171;
 }
+
+/* High contrast mode, toggled via the button in Dashboard's header (App.jsx
+   sets/removes this class on <html> and persists the choice to localStorage).
+   Overrides the same theme variables above, so every existing color utility
+   (background, text, border) picks it up automatically — no per-component
+   changes needed. */
+:root.hc {
+  --color-bg: #000000;
+  --color-surface: #000000;
+  --color-surface-2: #0a0a0a;
+  --color-border: #ffffff;
+  --color-ink: #ffffff;
+  --color-ink-muted: #e5e7eb;
+  --color-ink-faint: #d1d5db;
+
+  --color-accent: #a5b4fc;
+
+  --color-status-queued: #fbbf24;
+  --color-status-scheduled: #7dd3fc;
+  --color-status-inprogress: #c4b5fd;
+  --color-status-done: #6ee7b7;
+  --color-status-overdue: #fca5a5;
+}
+
+:root.hc :focus-visible {
+  outline-width: 3px !important;
+}
+
+/* Solid accent buttons ("Run scheduler", "Accept this plan") pair bg-accent
+   with text-white. That's fine against the normal --color-accent (~4.5:1),
+   but the lighter --color-accent above exists so text-accent/border-accent
+   stay readable on a pure black background — paired with white button text
+   it would drop to ~2:1. Flip those specific buttons to a white-on-black
+   inversion instead of trying to find one accent value that works both
+   ways (there isn't one: the two requirements pull in opposite directions). */
+:root.hc .bg-accent {
+  background-color: #ffffff !important;
+  color: #000000 !important;
+  border: 2px solid var(--color-accent);
+}
+
+:root.hc .bg-accent:hover {
+  background-color: #ffffff !important;
+  opacity: 0.85;
+}

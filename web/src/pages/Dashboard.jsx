@@ -15,8 +15,9 @@ import ProcessBoard from '../components/ProcessBoard';
 import OverridePlanModal from '../components/OverridePlanModal';
 import MetricsPanel from '../components/MetricsPanel';
 import HistoryTimeline from '../components/HistoryTimeline';
+import { ContrastIcon } from '../components/icons';
 
-function Dashboard() {
+function Dashboard({ highContrast, onToggleHighContrast }) {
   const [specialists, setSpecialists] = useState([]);
   const [queuedOrders, setQueuedOrders] = useState([]);
   const [scheduleEntries, setScheduleEntries] = useState([]);
@@ -105,11 +106,27 @@ function Dashboard() {
           <p className="text-xs font-semibold uppercase tracking-widest text-accent">Research prototype</p>
           <h1 className="text-2xl font-bold text-ink">Process Twin AI Dashboard</h1>
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap items-center gap-2">
+          <button
+            type="button"
+            onClick={onToggleHighContrast}
+            aria-pressed={highContrast}
+            aria-label={highContrast ? 'Turn off high contrast mode' : 'Turn on high contrast mode'}
+            title="Toggle high contrast mode"
+            className={`${buttonBase} cursor-pointer gap-1.5 border ${
+              highContrast
+                ? 'border-ink bg-ink text-bg hover:bg-ink/90'
+                : 'border-border bg-surface text-ink-muted hover:border-accent hover:text-accent'
+            }`}
+          >
+            <ContrastIcon className="h-4 w-4" />
+            High contrast
+          </button>
           <button
             type="button"
             onClick={handleGenerate}
             disabled={isGenerating}
+            aria-label="Generate 10 new synthetic orders into the queue"
             className={`${buttonBase} cursor-pointer border border-border bg-surface text-ink hover:border-accent hover:text-accent`}
           >
             {isGenerating ? 'Generating…' : 'Generate orders'}
@@ -118,6 +135,7 @@ function Dashboard() {
             type="button"
             onClick={handleRunSchedule}
             disabled={isScheduling || queuedOrders.length === 0}
+            aria-label="Run the scheduler on all queued orders"
             className={`${buttonBase} cursor-pointer bg-accent text-white hover:bg-accent/90`}
           >
             {isScheduling ? 'Scheduling…' : 'Run scheduler'}

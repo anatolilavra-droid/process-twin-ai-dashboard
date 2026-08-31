@@ -106,7 +106,7 @@ npm test    # Jest — 47 tests: routes, scheduler, explanation service, metrics
 
 ```bash
 cd web
-npm test    # Vitest — 30 tests: lib/format.js, api/client.js, OrderTypeTag, StatusBadge
+npm test    # Vitest — 33 tests: lib/format.js, api/client.js, OrderTypeTag, StatusBadge, the high contrast toggle
 ```
 
 ## Deployment
@@ -136,6 +136,14 @@ Requires `ANTHROPIC_API_KEY` in `server/.env`. Without it (or if the call fails 
 
 `GET /api/metrics` returns three numbers, rendered as `MetricsPanel.jsx`: `plannedOnTimeRate`, `avgProcessingHours`, `overrideRate`. All three are `null` (never `0`) when there's no data yet, so an empty dashboard reads as "no data" rather than a misleading 0%. `plannedOnTimeRate` is named deliberately — it's whether the *current plan* meets each deadline, not whether work actually finished on time (see "Known limitations"). `HistoryTimeline.jsx` lists every `GET /api/decisions` entry, newest first, with the operator's reason where one was given.
 
+## Accessibility
+
+Every interactive element (buttons, the specialist `<select>`, date/time inputs, the modal's close button) has a visible `:focus-visible` outline, not just a browser default. Primary actions carry explicit `aria-label`s beyond their visible text — the assignment cards on the process board, for instance, expose their order type, status, specialist, and time window to assistive tech in one string, not just the visual layout. The override modal traps focus on open (focuses its close button) and closes on <kbd>Escape</kbd>.
+
+A **High contrast** toggle sits in the dashboard header (`web/src/App.jsx` + `web/src/index.css`'s `:root.hc` block). It swaps the theme's CSS custom properties for a near-black/white palette and inverts the two solid accent buttons ("Run scheduler", "Accept this plan") to white-on-black — verified at a 21:1 contrast ratio, since the lighter accent color used for on-black text/borders would otherwise fail badly when paired with white button text (checked with the actual WCAG contrast formula, not eyeballed — see the commit that added this). The choice persists to `localStorage` so it survives a reload.
+
+Not done: no automated accessibility audit (axe, Lighthouse) has been run against this app, and no screen reader walkthrough — the above was verified with real contrast-ratio math and Playwright interaction checks, not a full audit. A next pass would add one.
+
 ## For Researchers page and demo script
 
 The `For Researchers` tab in the app (`web/src/pages/ForResearchers.jsx`) is a static, researcher-facing view of the same research questions, an architecture summary, the limitations list, and contact info — meant to be shown, not just read as markdown. [`docs/demo-script.md`](docs/demo-script.md) is a step-by-step ~3–5 minute live walkthrough of the whole app (generate → schedule → explain → override → metrics/history → this tab), written for presenting to an audience that hasn't seen the project before.
@@ -146,3 +154,4 @@ The `For Researchers` tab in the app (`web/src/pages/ForResearchers.jsx`) is a s
 - Scheduler is a deterministic heuristic (earliest-deadline-first + type priority), not a learned model — see `server/services/schedulingService.js`.
 - Scheduler ignores specialists' `hours_per_day` and day/working-hours boundaries; treats them as available back-to-back from the reference time.
 - No order ever reaches `status: "done"` — nothing in the app transitions it there — so `plannedOnTimeRate` is prospective (is the current plan on track), not a real on-time-completion rate. Don't read it as the latter.
+- Accessibility (see "Accessibility" above) covers focus styles, `aria-label`s on primary actions, and a contrast-checked high contrast mode — but no automated audit (axe, Lighthouse) or screen reader walkthrough has been run.

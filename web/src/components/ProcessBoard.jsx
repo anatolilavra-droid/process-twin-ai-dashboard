@@ -49,6 +49,7 @@ function ProcessBoard({ specialists, scheduleEntries, loading, onSelectAssignmen
                         <button
                           type="button"
                           onClick={() => onSelectAssignment(entry)}
+                          aria-label={`View plan for this ${entry.orderType} order (${entry.orderStatus}), assigned to ${specialist.name}, ${formatBoardTime(entry.plannedStart)} to ${formatClockTime(entry.plannedEnd)}`}
                           className="w-full cursor-pointer rounded border border-border bg-surface-2 p-2 text-left transition hover:border-accent focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
                         >
                           <div className="mb-1 flex items-center justify-between gap-2">

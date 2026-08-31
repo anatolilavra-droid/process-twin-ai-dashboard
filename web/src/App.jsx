@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import Dashboard from './pages/Dashboard';
 import ForResearchers from './pages/ForResearchers';
 
@@ -7,8 +7,28 @@ const TABS = [
   { id: 'research', label: 'For Researchers' },
 ];
 
+function readStoredHighContrast() {
+  try {
+    return localStorage.getItem('highContrast') === 'true';
+  } catch {
+    // Private browsing / storage disabled — fall back to the default (off).
+    return false;
+  }
+}
+
 function App() {
   const [view, setView] = useState('dashboard');
+  const [highContrast, setHighContrast] = useState(readStoredHighContrast);
+
+  useEffect(() => {
+    document.documentElement.classList.toggle('hc', highContrast);
+    try {
+      localStorage.setItem('highContrast', String(highContrast));
+    } catch {
+      // Private browsing / storage disabled — the toggle still works for this
+      // page load, it just won't be remembered next visit.
+    }
+  }, [highContrast]);
 
   return (
     <div className="min-h-screen bg-bg font-sans text-ink">
@@ -32,7 +52,11 @@ function App() {
         </div>
       </nav>
 
-      {view === 'dashboard' ? <Dashboard /> : <ForResearchers />}
+      {view === 'dashboard' ? (
+        <Dashboard highContrast={highContrast} onToggleHighContrast={() => setHighContrast(v => !v)} />
+      ) : (
+        <ForResearchers />
+      )}
     </div>
   );
 }
