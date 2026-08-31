@@ -101,7 +101,12 @@ Runs on `http://localhost:5173`.
 
 ```bash
 cd server
-npm test
+npm test    # Jest — 47 tests: routes, scheduler, explanation service, metrics, repositories
+```
+
+```bash
+cd web
+npm test    # Vitest — 30 tests: lib/format.js, api/client.js, OrderTypeTag, StatusBadge
 ```
 
 ## Deployment

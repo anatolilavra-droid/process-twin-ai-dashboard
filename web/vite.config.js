@@ -9,4 +9,9 @@ export default defineConfig(({ command }) => ({
   // must stay at "/" or the local README/demo-script instructions break.
   base: command === 'build' ? '/process-twin-ai-dashboard/' : '/',
   plugins: [react(), tailwindcss()],
+  test: {
+    environment: 'jsdom',
+    setupFiles: ['./vitest.setup.js'],
+    globals: true,
+  },
 }))
