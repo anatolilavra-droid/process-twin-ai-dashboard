@@ -12,6 +12,45 @@ const decisionLogRepository = require('../repositories/decisionLogRepository');
  * not "did work finish on time" — those are different claims and the field
  * name says which one this is.
  */
+/**
+ * For each order, the time between its first `ai_proposed` decision and the
+ * first human decision (accept or override) that follows — i.e. how long
+ * the operator took to make their first call on the AI's proposal. Computed
+ * entirely from decision_log.created_at, which was already being recorded
+ * for every decision; no new instrumentation needed.
+ *
+ * Deliberately simple: only the *first* human decision per order counts.
+ * An order re-overridden more than once (see docs/spec.md's overrideRate
+ * caveat) only contributes its first accept-or-override latency here — this
+ * does not attempt to measure "time to re-decide" on a second override.
+ *
+ * `rows` must be pre-sorted by (order_id, created_at) — listAllWithOrderType()
+ * does this in SQL so this function doesn't have to.
+ */
+function computeDecisionLatencies(rows) {
+  const byOrder = new Map();
+  for (const row of rows) {
+    if (!byOrder.has(row.order_id)) byOrder.set(row.order_id, []);
+    byOrder.get(row.order_id).push(row);
+  }
+
+  const latencies = [];
+  for (const orderRows of byOrder.values()) {
+    const proposed = orderRows.find(r => r.action === 'ai_proposed');
+    if (!proposed) continue;
+    const decided = orderRows.find(r => r.action === 'human_accepted' || r.action === 'human_overridden');
+    if (!decided) continue;
+
+    const latencySeconds = (new Date(decided.created_at).getTime() - new Date(proposed.created_at).getTime()) / 1000;
+    // decisionId identifies exactly which decision_log row this latency belongs
+    // to — needed by the CSV/JSON export (services/exportService.js) to attach
+    // it to the right row rather than guessing by order+action, which would be
+    // ambiguous for a re-override chain (see the "FIRST human decision" test).
+    latencies.push({ orderId: proposed.order_id, decisionId: decided.id, action: decided.action, latencySeconds });
+  }
+  return latencies;
+}
+
 function computeMetrics() {
   const currentEntries = assignmentRepository.listCurrentWithDetails();
 
@@ -28,17 +67,24 @@ function computeMetrics() {
   const overrideRate =
     actionCounts.ai_proposed > 0 ? actionCounts.human_overridden / actionCounts.ai_proposed : null;
 
+  const latencies = computeDecisionLatencies(decisionLogRepository.listAllWithOrderType());
+  const avgDecisionLatencySeconds = latencies.length
+    ? latencies.reduce((sum, l) => sum + l.latencySeconds, 0) / latencies.length
+    : null;
+
   return {
     plannedOnTimeRate,
     avgProcessingHours,
     overrideRate,
+    avgDecisionLatencySeconds,
     sampleSize: {
       currentAssignments: currentEntries.length,
       aiProposedDecisions: actionCounts.ai_proposed,
       humanAcceptedDecisions: actionCounts.human_accepted,
       humanOverriddenDecisions: actionCounts.human_overridden,
+      decisionsWithLatency: latencies.length,
     },
   };
 }
 
-module.exports = { computeMetrics };
+module.exports = { computeMetrics, computeDecisionLatencies };

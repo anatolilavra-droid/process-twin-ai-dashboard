@@ -122,6 +122,18 @@ Four questions this prototype is built to let someone investigate (full text in 
 3. **How should human-in-the-loop interfaces be designed so a person can override an AI decision?** `OverridePlanModal.jsx` + `decision_log` make the override flow and its outcomes observable (`overrideRate` in `GET /api/metrics`) — but override behavior hasn't been measured with real operators, only exercised manually.
 4. **How is the impact of AI recommendations on decision quality measured (time, deadlines, satisfaction)?** `plannedOnTimeRate` and `avgProcessingHours` are a first, honestly-scoped attempt (see "Known limitations" — no real completion tracking exists) — deadline/time are covered, satisfaction is not.
 
+## Research design
+
+**This prototype is Stage 0 — an instrument to run a study on, not a study that has run.** The four broad questions above frame the project; [`docs/experiment-design.md`](docs/experiment-design.md) narrows that down to 3 specific, currently-answerable research questions with stated hypotheses, an experiment design (within-subjects, counterbalanced, proposed sample size range with the reasoning behind it), and an honest ethics section (including what this project genuinely cannot state, like whether formal ethics-committee approval is required — that depends on institutional context this repo doesn't have information about).
+
+The 3 RQs (full detail, including the exact fields and code they're computed from, in the linked doc):
+
+1. Does a real AI-generated explanation (vs. the deterministic fallback) change override behavior?
+2. Does the explanation's stated confidence level predict accept vs. override?
+3. Does deciding take longer for an override than an accept?
+
+All three are answerable today from `GET /api/metrics` (now including `avgDecisionLatencySeconds`) and the new `GET /api/decisions/export` (`?format=csv` or `?format=json`) — every decision, joined with order type, the explanation shown at decision time, and decision latency, for analysis outside the app. What's explicitly *not* measurable yet — subjective trust, cognitive load, per-participant identity — is named as such in `docs/experiment-design.md`, not glossed over.
+
 ## AI explanations
 
 `GET /api/orders/:id/explanation` calls Claude (`claude-opus-5` — the skill-mandated default; override in `server/services/explanationService.js` if you want a cheaper model for this route) to explain a scheduled order's assignment in plain language, grounded only in the same inputs the scheduler itself used (deadline, order type's priority bonus, specialist availability/queue position) — no invented "priority" or "VIP" fields. Structured output is enforced via `client.messages.parse()` + a Zod schema, not manual `JSON.parse()`.
@@ -134,7 +146,9 @@ Requires `ANTHROPIC_API_KEY` in `server/.env`. Without it (or if the call fails 
 
 ## Metrics and decision history
 
-`GET /api/metrics` returns three numbers, rendered as `MetricsPanel.jsx`: `plannedOnTimeRate`, `avgProcessingHours`, `overrideRate`. All three are `null` (never `0`) when there's no data yet, so an empty dashboard reads as "no data" rather than a misleading 0%. `plannedOnTimeRate` is named deliberately — it's whether the *current plan* meets each deadline, not whether work actually finished on time (see "Known limitations"). `HistoryTimeline.jsx` lists every `GET /api/decisions` entry, newest first, with the operator's reason where one was given.
+`GET /api/metrics` returns four numbers, rendered as `MetricsPanel.jsx`: `plannedOnTimeRate`, `avgProcessingHours`, `overrideRate`, `avgDecisionLatencySeconds`. All four are `null` (never `0`) when there's no data yet, so an empty dashboard reads as "no data" rather than a misleading 0%. `plannedOnTimeRate` is named deliberately — it's whether the *current plan* meets each deadline, not whether work actually finished on time (see "Known limitations"). `avgDecisionLatencySeconds` is the time from an order's AI proposal to the operator's first accept/override, computed from timestamps already being logged — see `docs/spec.md`. `HistoryTimeline.jsx` lists every `GET /api/decisions` entry, newest first, with the operator's reason where one was given.
+
+`GET /api/decisions/export` (`?format=csv` or `?format=json`) pulls every decision out for offline analysis — order type, action, the explanation shown at decision time, reason text, and decision latency, joined in one row. Not used by the app's own UI; built for research use (see "Research design" above).
 
 ## Accessibility
 

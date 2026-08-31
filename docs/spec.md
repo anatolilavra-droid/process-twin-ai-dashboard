@@ -29,7 +29,8 @@ Small service company (workshop / IT service / cleaning — the schema is neutra
 | `POST` | `/api/assignments/:id/accept` | Logs `human_accepted`; assignment unchanged. 404 unknown, 409 if already superseded |
 | `POST` | `/api/assignments/:id/override` | `{specialistId, plannedStart, plannedEnd, reason?}` — supersedes the old assignment, creates a new `created_by: "human"` one, logs `human_overridden` with the reason |
 | `GET` | `/api/decisions` | `?orderId=&limit=&offset=`, most recent first |
-| `GET` | `/api/metrics` | `plannedOnTimeRate` / `avgProcessingHours` / `overrideRate` — see below |
+| `GET` | `/api/decisions/export` | Research export (31.08.2026): `?format=csv` (default) or `?format=json` — every decision, unpaginated, joined with order type, the explanation shown at decision time, and decision latency. See "Research export" below. |
+| `GET` | `/api/metrics` | `plannedOnTimeRate` / `avgProcessingHours` / `overrideRate` / `avgDecisionLatencySeconds` — see below |
 
 ## Scheduler (`server/services/schedulingService.js`)
 
@@ -61,9 +62,15 @@ The three metrics CLAUDE.md names ("% заказов в дедлайн, сред
 - `avgProcessingHours` — mean `estimated_hours` across current assignments.
 - `overrideRate` — `human_overridden` / `ai_proposed` decision counts, all-time (not just current assignments). Caveat found in code review (31.08.2026): the UI doesn't stop someone from overriding an assignment that was itself created by a previous override (`OverridePlanModal`/`ProcessBoard` don't check `created_by`), so a repeated-override chain on one order logs multiple `human_overridden` events against a single original `ai_proposed` one. In that case the ratio no longer cleanly means "share of distinct AI proposals overridden" — it can run higher than that. Not fixed (would mean deciding whether re-overriding an already-human assignment should even be allowed, which is a product decision, not a bug fix), just documented so the number isn't read as more precise than it is.
 
-All three are `null` (never `0`) when their denominator is empty, so an empty dashboard reads as "no data" rather than a misleading 0%. `sampleSize` in the response carries the underlying counts.
+- `avgDecisionLatencySeconds` (added 31.08.2026): for each order, the time between its first `ai_proposed` decision and the first human decision (accept or override) that follows, averaged across orders that got one. Computed entirely from `decision_log.created_at` timestamps that were already being recorded — no schema change, no new instrumentation. See `computeDecisionLatencies()` in `metricsService.js`. Deliberately simple: only the *first* human decision per order counts, so it doesn't attempt to measure "time to re-decide" in a re-override chain (see the `overrideRate` caveat above — same underlying edge case).
 
-`MetricsPanel.jsx` renders the three tiles; `HistoryTimeline.jsx` lists `GET /api/decisions` newest-first with the reason text when present. Both refresh alongside the rest of `Dashboard.jsx`'s state after every action (generate/schedule/accept/override).
+All four are `null` (never `0`) when their denominator is empty, so an empty dashboard reads as "no data" rather than a misleading 0%. `sampleSize` in the response carries the underlying counts, including `decisionsWithLatency`.
+
+`MetricsPanel.jsx` renders the four tiles; `HistoryTimeline.jsx` lists `GET /api/decisions` newest-first with the reason text when present. Both refresh alongside the rest of `Dashboard.jsx`'s state after every action (generate/schedule/accept/override).
+
+## Research export (`server/services/exportService.js`, added 31.08.2026)
+
+`GET /api/decisions/export` (`?format=csv` default, or `?format=json`) — every `decision_log` row, unpaginated, joined with the order's type, the explanation that was actually shown for the relevant assignment at decision time (the overridden assignment's explanation for `human_overridden`, the accepted one's for `human_accepted`; `null` for `ai_proposed`, which has no decision attached to it yet), and the decision latency computed above (attached only to the specific row `computeDecisionLatencies()` measured, not every row for that order). Built for pulling data out of the running prototype for offline analysis (R, Python, a spreadsheet) — nothing in the app's own UI reads this endpoint.
 
 ## Demo / researcher-facing surfaces (Stage D)
 

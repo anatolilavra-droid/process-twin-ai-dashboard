@@ -21,7 +21,7 @@ const specialistRepository = require('../repositories/specialistRepository');
 const orderRepository = require('../repositories/orderRepository');
 const assignmentRepository = require('../repositories/assignmentRepository');
 const decisionLogRepository = require('../repositories/decisionLogRepository');
-const { computeMetrics } = require('../services/metricsService');
+const { computeMetrics, computeDecisionLatencies } = require('../services/metricsService');
 
 afterAll(() => {
   fs.rmSync(tmpDbPath, { force: true });
@@ -49,11 +49,13 @@ describe('computeMetrics on an empty DB', () => {
     expect(metrics.plannedOnTimeRate).toBeNull();
     expect(metrics.avgProcessingHours).toBeNull();
     expect(metrics.overrideRate).toBeNull();
+    expect(metrics.avgDecisionLatencySeconds).toBeNull();
     expect(metrics.sampleSize).toEqual({
       currentAssignments: 0,
       aiProposedDecisions: 0,
       humanAcceptedDecisions: 0,
       humanOverriddenDecisions: 0,
+      decisionsWithLatency: 0,
     });
   });
 });
@@ -135,6 +137,41 @@ describe('computeMetrics with real data', () => {
       aiProposedDecisions: 2,
       humanAcceptedDecisions: 0,
       humanOverriddenDecisions: 1,
+      decisionsWithLatency: 1, // only lateOrderId got a human decision; onTimeOrderId is still just ai_proposed
     });
+  });
+
+  it('computes avgDecisionLatencySeconds from the one order that got a human decision (09:00 -> 09:05 = 300s)', () => {
+    const metrics = computeMetrics();
+    expect(metrics.avgDecisionLatencySeconds).toBeCloseTo(300);
+  });
+});
+
+describe('computeDecisionLatencies (pure function, no DB)', () => {
+  it('pairs the first ai_proposed with the first human decision that follows, in seconds', () => {
+    const rows = [
+      { id: 'd1', order_id: 'o1', action: 'ai_proposed', created_at: '2026-08-30T09:00:00.000Z' },
+      { id: 'd2', order_id: 'o1', action: 'human_accepted', created_at: '2026-08-30T09:01:30.000Z' },
+    ];
+    expect(computeDecisionLatencies(rows)).toEqual([
+      { orderId: 'o1', decisionId: 'd2', action: 'human_accepted', latencySeconds: 90 },
+    ]);
+  });
+
+  it('skips an order that was only ever proposed, never decided', () => {
+    const rows = [{ id: 'd1', order_id: 'o1', action: 'ai_proposed', created_at: '2026-08-30T09:00:00.000Z' }];
+    expect(computeDecisionLatencies(rows)).toEqual([]);
+  });
+
+  it('uses only the FIRST human decision in a re-override chain, not the second', () => {
+    const rows = [
+      { id: 'd1', order_id: 'o1', action: 'ai_proposed', created_at: '2026-08-30T09:00:00.000Z' },
+      { id: 'd2', order_id: 'o1', action: 'human_overridden', created_at: '2026-08-30T09:02:00.000Z' },
+      { id: 'd3', order_id: 'o1', action: 'human_overridden', created_at: '2026-08-30T09:10:00.000Z' },
+    ];
+    const result = computeDecisionLatencies(rows);
+    expect(result).toHaveLength(1);
+    expect(result[0].decisionId).toBe('d2'); // the 09:10 re-override (d3) is not counted a second time
+    expect(result[0].latencySeconds).toBe(120);
   });
 });

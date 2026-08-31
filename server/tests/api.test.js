@@ -309,4 +309,40 @@ describe('GET /api/metrics', () => {
     expect(res.body.sampleSize.aiProposedDecisions).toBeGreaterThan(0);
     expect(typeof res.body.avgProcessingHours).toBe('number');
   });
+
+  it('includes avgDecisionLatencySeconds alongside the other rates', () =>
+    request(app)
+      .get('/api/metrics')
+      .then(res => {
+        expect(res.status).toBe(200);
+        expect(res.body).toHaveProperty('avgDecisionLatencySeconds');
+        expect(res.body.sampleSize).toHaveProperty('decisionsWithLatency');
+      }));
+});
+
+describe('GET /api/decisions/export', () => {
+  it('defaults to CSV with a header row matching every decision row, plus a download filename', async () => {
+    const res = await request(app).get('/api/decisions/export');
+    expect(res.status).toBe(200);
+    expect(res.headers['content-type']).toMatch(/text\/csv/);
+    expect(res.headers['content-disposition']).toContain('attachment');
+
+    const lines = res.text.trim().split('\n');
+    expect(lines[0]).toBe(
+      'decisionId,orderId,orderType,action,previousAssignmentId,newAssignmentId,reasonText,createdAt,explanationSource,explanationConfidence,decisionLatencySeconds'
+    );
+    // One line per decision_log row logged by every earlier test in this file.
+    const jsonCount = (await request(app).get('/api/decisions/export').query({ format: 'json' })).body.length;
+    expect(lines.length - 1).toBe(jsonCount);
+  });
+
+  it('?format=json returns the same rows as parsed objects, including the override reason from an earlier test', async () => {
+    const res = await request(app).get('/api/decisions/export').query({ format: 'json' });
+    expect(res.status).toBe(200);
+    expect(Array.isArray(res.body)).toBe(true);
+    expect(res.body.length).toBeGreaterThan(0);
+
+    const overrideRow = res.body.find(r => r.reasonText === 'specialist was busy with another client');
+    expect(overrideRow).toMatchObject({ action: 'human_overridden', orderId: scheduledOrderId });
+  });
 });

@@ -6,6 +6,13 @@ function formatHours(value) {
   return value === null || value === undefined ? '—' : `${value.toFixed(1)}h`;
 }
 
+function formatDuration(seconds) {
+  if (seconds === null || seconds === undefined) return '—';
+  if (seconds < 60) return `${Math.round(seconds)}s`;
+  if (seconds < 3600) return `${Math.round(seconds / 60)}m`;
+  return `${(seconds / 3600).toFixed(1)}h`;
+}
+
 function MetricsPanel({ metrics, loading }) {
   if (loading || !metrics) {
     return (
@@ -15,7 +22,7 @@ function MetricsPanel({ metrics, loading }) {
     );
   }
 
-  const { plannedOnTimeRate, avgProcessingHours, overrideRate, sampleSize } = metrics;
+  const { plannedOnTimeRate, avgProcessingHours, overrideRate, avgDecisionLatencySeconds, sampleSize } = metrics;
 
   const tiles = [
     {
@@ -33,10 +40,15 @@ function MetricsPanel({ metrics, loading }) {
       value: formatPercent(overrideRate),
       caveat: `${sampleSize.humanOverriddenDecisions} of ${sampleSize.aiProposedDecisions} AI proposal(s) overridden`,
     },
+    {
+      label: 'Avg. decision latency',
+      value: formatDuration(avgDecisionLatencySeconds),
+      caveat: `time from AI proposal to the operator's first accept/override, across ${sampleSize.decisionsWithLatency} decided order(s)`,
+    },
   ];
 
   return (
-    <div className="grid grid-cols-1 gap-px overflow-hidden rounded-lg border border-border bg-border sm:grid-cols-3">
+    <div className="grid grid-cols-1 gap-px overflow-hidden rounded-lg border border-border bg-border sm:grid-cols-2 lg:grid-cols-4">
       {tiles.map(tile => (
         <div key={tile.label} className="bg-surface p-4">
           <p className="text-xs font-semibold uppercase tracking-wide text-ink-faint">{tile.label}</p>

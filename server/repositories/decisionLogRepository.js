@@ -28,4 +28,18 @@ function countsByAction() {
   return counts;
 }
 
-module.exports = { create, findById, list, countsByAction };
+// Unpaginated, joined with order_type — for metricsService's decision-latency
+// computation and the CSV/JSON research export, both of which need every row
+// (not a page of them) grouped chronologically per order.
+function listAllWithOrderType() {
+  return db
+    .prepare(
+      `SELECT dl.*, o.order_type
+       FROM decision_log dl
+       JOIN orders o ON o.id = dl.order_id
+       ORDER BY dl.order_id, dl.created_at`
+    )
+    .all();
+}
+
+module.exports = { create, findById, list, countsByAction, listAllWithOrderType };
