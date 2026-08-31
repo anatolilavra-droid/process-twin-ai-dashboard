@@ -41,6 +41,39 @@ server/   Express + SQLite backend (routes/controllers/services/repositories, on
 web/      React + Vite + Tailwind dashboard
 ```
 
+### 🏗️ Architecture overview
+
+```mermaid
+graph TD
+    subgraph Frontend [Web UI — GitHub Pages]
+        Dashboard[Dashboard: ProcessBoard, OrderQueue, MetricsPanel, HistoryTimeline]
+        Dashboard <--> ExplPanel[ExplanationPanel]
+        Dashboard <--> Modal[OverridePlanModal]
+    end
+
+    subgraph Backend [Server API — Render free tier]
+        API[Express routes /api/*]
+        API <--> Sched[schedulingService.js<br/>deterministic EDF + type-priority heuristic]
+        API <--> ExplService[explanationService.js<br/>Claude claude-opus-5, or deterministic fallback]
+        API <--> Decision[decisionService.js<br/>accept / override / decision_log]
+        API <--> Metrics[metricsService.js]
+    end
+
+    subgraph Data [Data & AI layer]
+        DB[(SQLite<br/>better-sqlite3)]
+        LLM[Anthropic Claude API]
+    end
+
+    Dashboard <-->|REST / JSON, VITE_API_BASE_URL| API
+    Sched <--> DB
+    Decision <--> DB
+    Metrics <--> DB
+    ExplService <--> DB
+    ExplService <-->|structured output, Zod schema| LLM
+```
+
+Storage is SQLite, not a hosted database — Render's free plan has no persistent disk, so `migrate`/`seed` re-run on every boot (see [`docs/deployment.md`](docs/deployment.md)). The scheduler is a deterministic heuristic, not a learned model (see "Known limitations").
+
 ## Quickstart
 
 ### Backend
