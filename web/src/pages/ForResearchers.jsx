@@ -85,7 +85,9 @@ function ForResearchers() {
         <p className="mt-2 text-sm text-ink-muted">
           Anatoli Lavra — independent AI-driven architect &amp; product creator, based in Leipzig, Germany.
           <br />
-          [add preferred contact — email or LinkedIn]
+          <a href="mailto:anatolilavra@gmail.com" className="text-accent underline hover:no-underline">
+            anatolilavra@gmail.com
+          </a>
         </p>
       </section>
     </div>

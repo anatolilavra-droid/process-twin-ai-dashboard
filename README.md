@@ -24,7 +24,7 @@ Three research questions this prototype can answer *today*, without adding anyth
 
 ## Collaboration interest
 
-Author: Anatoli Lavra, independent AI-driven architect & product creator, based in Leipzig, Germany — see [`docs/research-paper-outline.md`](docs/research-paper-outline.md) and the "For Researchers" tab in the live app for more.
+Author: Anatoli Lavra, independent AI-driven architect & product creator, based in Leipzig, Germany. Contact: [anatolilavra@gmail.com](mailto:anatolilavra@gmail.com) — see also [`docs/research-paper-outline.md`](docs/research-paper-outline.md) and the "For Researchers" tab in the live app.
 
 Open to research collaboration in whatever form actually fits — a research-assistant or project-based role, contract research, or a longer academic path if that turns out to be the right one — rather than committing to one format here without knowing what a given institute actually has available. If a Fraunhofer group (or any lab working on human-in-the-loop / explainable AI in operational settings) has something this prototype could plug into, or an open position this profile fits, that's the conversation worth having.
 
