@@ -4,7 +4,11 @@ import OrderTypeTag from './OrderTypeTag';
 import StatusBadge from './StatusBadge';
 import { formatBoardTime, formatClockTime, toDatetimeLocalValue } from '../lib/format';
 
+const FOCUSABLE_SELECTOR =
+  'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
+
 function OverridePlanModal({ entry, specialists, onClose, onAccept, onOverride }) {
+  const dialogRef = useRef(null);
   const closeButtonRef = useRef(null);
   const [specialistId, setSpecialistId] = useState(entry.specialistId);
   const [plannedStart, setPlannedStart] = useState(toDatetimeLocalValue(entry.plannedStart));
@@ -15,8 +19,31 @@ function OverridePlanModal({ entry, specialists, onClose, onAccept, onOverride }
 
   useEffect(() => {
     closeButtonRef.current?.focus();
+
+    // Basic focus trap: without this, Tab from the last field (or Shift+Tab
+    // from the close button) moves focus onto the dashboard underneath the
+    // overlay — invisible to a sighted user (it's covered), but a real trap
+    // for a keyboard-only or screen-reader user, who'd operate a control
+    // they can't see while the modal is still open on top of it.
     function handleKeyDown(e) {
-      if (e.key === 'Escape') onClose();
+      if (e.key === 'Escape') {
+        onClose();
+        return;
+      }
+      if (e.key !== 'Tab' || !dialogRef.current) return;
+
+      const focusable = Array.from(dialogRef.current.querySelectorAll(FOCUSABLE_SELECTOR));
+      if (focusable.length === 0) return;
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+
+      if (e.shiftKey && document.activeElement === first) {
+        e.preventDefault();
+        last.focus();
+      } else if (!e.shiftKey && document.activeElement === last) {
+        e.preventDefault();
+        first.focus();
+      }
     }
     document.addEventListener('keydown', handleKeyDown);
     return () => document.removeEventListener('keydown', handleKeyDown);
@@ -56,6 +83,7 @@ function OverridePlanModal({ entry, specialists, onClose, onAccept, onOverride }
   return (
     <div className="fixed inset-0 z-10 flex items-center justify-center bg-black/60 px-4" onClick={onClose}>
       <div
+        ref={dialogRef}
         role="dialog"
         aria-modal="true"
         aria-labelledby="override-modal-heading"

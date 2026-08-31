@@ -59,7 +59,7 @@ The three metrics CLAUDE.md names ("% заказов в дедлайн, сред
 
 - `plannedOnTimeRate` — of currently-planned assignments, the share whose `planned_end` is still before the order's `deadline_at`. This is **prospective** ("is the current plan on track"), not "did the work actually finish on time" — there is no order-completion event anywhere in the app (no route ever sets `status: 'done'`), so a real on-time-completion rate isn't something this prototype can honestly report yet. Don't rename this to "on-time rate" without adding real completion tracking first.
 - `avgProcessingHours` — mean `estimated_hours` across current assignments.
-- `overrideRate` — `human_overridden` / `ai_proposed` decision counts, all-time (not just current assignments).
+- `overrideRate` — `human_overridden` / `ai_proposed` decision counts, all-time (not just current assignments). Caveat found in code review (31.08.2026): the UI doesn't stop someone from overriding an assignment that was itself created by a previous override (`OverridePlanModal`/`ProcessBoard` don't check `created_by`), so a repeated-override chain on one order logs multiple `human_overridden` events against a single original `ai_proposed` one. In that case the ratio no longer cleanly means "share of distinct AI proposals overridden" — it can run higher than that. Not fixed (would mean deciding whether re-overriding an already-human assignment should even be allowed, which is a product decision, not a bug fix), just documented so the number isn't read as more precise than it is.
 
 All three are `null` (never `0`) when their denominator is empty, so an empty dashboard reads as "no data" rather than a misleading 0%. `sampleSize` in the response carries the underlying counts.
 

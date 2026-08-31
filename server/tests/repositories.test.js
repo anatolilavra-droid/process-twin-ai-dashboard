@@ -26,6 +26,7 @@ setupDb.close();
 const specialistRepository = require('../repositories/specialistRepository');
 const orderRepository = require('../repositories/orderRepository');
 const assignmentRepository = require('../repositories/assignmentRepository');
+const explanationRepository = require('../repositories/explanationRepository');
 
 afterAll(() => {
   fs.rmSync(tmpDbPath, { force: true });
@@ -134,5 +135,82 @@ describe('assignmentRepository', () => {
         createdAt: '2026-08-30T10:00:00.000Z',
       })
     ).toThrow();
+  });
+});
+
+describe('explanationRepository', () => {
+  function seedAssignment() {
+    const specialistId = randomUUID();
+    specialistRepository.create({ id: specialistId, name: 'Jonas', specialistType: 'generalist', hoursPerDay: 8 });
+
+    const orderId = randomUUID();
+    orderRepository.create({
+      id: orderId,
+      orderType: 'standard',
+      requiredSpecialistType: 'generalist',
+      estimatedHours: 1,
+      requiresEquipment: false,
+      createdAt: '2026-08-30T09:00:00.000Z',
+      deadlineAt: '2026-08-30T12:00:00.000Z',
+    });
+
+    const assignmentId = randomUUID();
+    assignmentRepository.create({
+      id: assignmentId,
+      orderId,
+      specialistId,
+      plannedStart: '2026-08-30T09:00:00.000Z',
+      plannedEnd: '2026-08-30T10:00:00.000Z',
+      createdBy: 'ai',
+      createdAt: '2026-08-30T09:00:00.000Z',
+    });
+    return assignmentId;
+  }
+
+  it('creates an explanation and reads it back with parsed factors', () => {
+    const assignmentId = seedAssignment();
+    const created = explanationRepository.create({
+      id: randomUUID(),
+      assignmentId,
+      factors: { topFactors: [{ factor: 'deadline', description: 'x', impact: 'high' }] },
+      summaryText: 'Assigned based on deadline.',
+      confidence: 'high',
+      source: 'llm',
+      createdAt: '2026-08-30T09:05:00.000Z',
+    });
+    expect(created.factors).toEqual({ topFactors: [{ factor: 'deadline', description: 'x', impact: 'high' }] });
+    expect(explanationRepository.findByAssignmentId(assignmentId).summary_text).toBe('Assigned based on deadline.');
+  });
+
+  // Regression test for a real race: GET /api/orders/:id/explanation reads
+  // the cache, and on a miss, generates + persists. Two concurrent requests
+  // for the same not-yet-cached assignment (double-click, two open tabs)
+  // both see no cached row and both try to INSERT — assignment_id is
+  // UNIQUE, so the second insert used to bubble a raw SQLITE_CONSTRAINT_UNIQUE
+  // error up to a 500 instead of just serving the first request's row.
+  it('does not throw when a second create() races the same assignment_id, and returns the first row', () => {
+    const assignmentId = seedAssignment();
+    const first = explanationRepository.create({
+      id: randomUUID(),
+      assignmentId,
+      factors: { topFactors: [] },
+      summaryText: 'First writer wins.',
+      confidence: 'high',
+      source: 'llm',
+      createdAt: '2026-08-30T09:05:00.000Z',
+    });
+
+    const second = explanationRepository.create({
+      id: randomUUID(),
+      assignmentId,
+      factors: { topFactors: [] },
+      summaryText: 'Second writer loses the race.',
+      confidence: 'high',
+      source: 'llm',
+      createdAt: '2026-08-30T09:05:01.000Z',
+    });
+
+    expect(second.id).toBe(first.id);
+    expect(second.summary_text).toBe('First writer wins.');
   });
 });
