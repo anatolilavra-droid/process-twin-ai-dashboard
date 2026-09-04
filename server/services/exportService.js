@@ -40,9 +40,15 @@ function buildDecisionExportRows() {
   const rows = decisionLogRepository.listAllWithOrderType();
   const latencyByDecisionId = new Map(computeDecisionLatencies(rows).map(l => [l.decisionId, l.latencySeconds]));
 
+  // One batched query for every explanation this export needs, instead of
+  // one findByAssignmentId() call per row — an export with N decision_log
+  // rows previously ran up to N extra SQL queries just for this join.
+  const relevantAssignmentIds = rows.map(relevantAssignmentId).filter(id => id !== null);
+  const explanationsByAssignmentId = explanationRepository.findByAssignmentIds(relevantAssignmentIds);
+
   return rows.map(row => {
     const assignmentId = relevantAssignmentId(row);
-    const explanation = assignmentId ? explanationRepository.findByAssignmentId(assignmentId) : null;
+    const explanation = assignmentId ? explanationsByAssignmentId.get(assignmentId) : undefined;
 
     return {
       decisionId: row.id,

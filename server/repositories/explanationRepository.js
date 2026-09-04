@@ -23,4 +23,22 @@ function findByAssignmentId(assignmentId) {
   return { ...row, factors: JSON.parse(row.factors_json) };
 }
 
-module.exports = { create, findByAssignmentId };
+// Batched version of findByAssignmentId for callers that need explanations
+// for many assignments at once (exportService.js) — one query instead of
+// one per row, since better-sqlite3 has no per-call caching and a decision
+// export can be hundreds of rows. Returns a Map so a caller doing a
+// row-by-row export can do O(1) lookups instead of re-querying.
+function findByAssignmentIds(assignmentIds) {
+  const uniqueIds = [...new Set(assignmentIds)];
+  const map = new Map();
+  if (uniqueIds.length === 0) return map;
+
+  const placeholders = uniqueIds.map(() => '?').join(',');
+  const rows = db.prepare(`SELECT * FROM explanations WHERE assignment_id IN (${placeholders})`).all(...uniqueIds);
+  for (const row of rows) {
+    map.set(row.assignment_id, { ...row, factors: JSON.parse(row.factors_json) });
+  }
+  return map;
+}
+
+module.exports = { create, findByAssignmentId, findByAssignmentIds };

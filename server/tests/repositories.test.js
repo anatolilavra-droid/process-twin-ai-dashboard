@@ -213,4 +213,64 @@ describe('explanationRepository', () => {
     expect(second.id).toBe(first.id);
     expect(second.summary_text).toBe('First writer wins.');
   });
+
+  // findByAssignmentIds is the batched read exportService.js uses instead of
+  // one findByAssignmentId() call per decision_log row — this is its only
+  // direct test, since the export tests in api.test.js only check the final
+  // output, not that the batching itself is correct.
+  describe('findByAssignmentIds', () => {
+    it('returns a Map keyed by assignment_id, one entry per assignment that has an explanation', () => {
+      const assignmentA = seedAssignment();
+      const assignmentB = seedAssignment();
+      const assignmentC = seedAssignment(); // deliberately left without an explanation
+
+      explanationRepository.create({
+        id: randomUUID(),
+        assignmentId: assignmentA,
+        factors: { topFactors: [] },
+        summaryText: 'A',
+        confidence: 'high',
+        source: 'llm',
+        createdAt: '2026-08-30T09:05:00.000Z',
+      });
+      explanationRepository.create({
+        id: randomUUID(),
+        assignmentId: assignmentB,
+        factors: { topFactors: [] },
+        summaryText: 'B',
+        confidence: 'low',
+        source: 'fallback',
+        createdAt: '2026-08-30T09:06:00.000Z',
+      });
+
+      const result = explanationRepository.findByAssignmentIds([assignmentA, assignmentB, assignmentC]);
+
+      expect(result.size).toBe(2);
+      expect(result.get(assignmentA).summary_text).toBe('A');
+      expect(result.get(assignmentB).source).toBe('fallback');
+      expect(result.has(assignmentC)).toBe(false);
+    });
+
+    it('deduplicates repeated ids into a single query and still returns one entry', () => {
+      const assignmentId = seedAssignment();
+      explanationRepository.create({
+        id: randomUUID(),
+        assignmentId,
+        factors: { topFactors: [] },
+        summaryText: 'Only one row expected',
+        confidence: 'medium',
+        source: 'llm',
+        createdAt: '2026-08-30T09:05:00.000Z',
+      });
+
+      const result = explanationRepository.findByAssignmentIds([assignmentId, assignmentId, assignmentId]);
+
+      expect(result.size).toBe(1);
+      expect(result.get(assignmentId).summary_text).toBe('Only one row expected');
+    });
+
+    it('returns an empty Map for an empty input without querying the database', () => {
+      expect(explanationRepository.findByAssignmentIds([])).toEqual(new Map());
+    });
+  });
 });
